@@ -1,4 +1,5 @@
 from datetime import date
+from typing import List
 
 from pydantic import BaseModel
 
@@ -16,4 +17,14 @@ class AttendanceOut(AttendanceCreate):
 
     class Config:
         from_attributes = True
-        
+
+
+class AttendanceEntry(BaseModel):
+    student_id: int
+    status: str
+    remarks: str | None = None
+
+
+class BulkAttendanceCreate(BaseModel):
+    record_date: date
+    entries: List[AttendanceEntry]

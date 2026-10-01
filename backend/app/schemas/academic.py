@@ -11,7 +11,7 @@ class AssessmentCreate(BaseModel):
     assessment_type: str
     score: float = Field(ge=0)
     max_score: float = Field(gt=0)
-    assessment_date: date
+    assessment_date: date | None = None
 
 
 class AssessmentOut(AssessmentCreate):

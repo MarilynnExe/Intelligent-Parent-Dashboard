@@ -34,7 +34,7 @@ from app.models.behaviour import (
 
 from app.schemas.behaviour import (
     BehaviourCreate,
-    ObservationCreate
+    TeacherObservationCreate
 )
 
 router = APIRouter(
@@ -144,7 +144,7 @@ def get_assigned_students(
 
     return results
 
-    @router.post(
+@router.post(
     "/assessments",
     response_model=AssessmentOut
 )
@@ -234,7 +234,7 @@ def record_assessment(
 
     return assessment
 
-    @router.get(
+@router.get(
     "/students/{student_id}/assessments",
     response_model=List[AssessmentOut]
 )
@@ -291,7 +291,7 @@ def get_student_assessments(
         .all()
     )
 
-    @router.post("/attendance/bulk")
+@router.post("/attendance/bulk")
 def record_bulk_attendance(
     data: BulkAttendanceCreate,
 
@@ -378,7 +378,7 @@ def record_bulk_attendance(
         )
     }
 
-    @router.post("/behaviour")
+@router.post("/behaviour")
 def record_behaviour(
     data: BehaviourCreate,
 
@@ -444,9 +444,9 @@ def record_behaviour(
         "record_id": record.record_id
     }
 
-    @router.post("/observations")
+@router.post("/observations")
 def add_teacher_observation(
-    data: ObservationCreate,
+    data: TeacherObservationCreate,
 
     current_user: User = Depends(
         require_role(["TEACHER"])
@@ -491,7 +491,10 @@ def add_teacher_observation(
 
     observation = TeacherObservation(
         student_id=data.student_id,
-        observation_date=date.today(),
+        observation_date=(
+            data.observation_date
+            or date.today()
+        ),
         term=data.term,
         academic_year=data.academic_year,
         observation_text=data.observation_text,

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class BehaviourCreate(BaseModel):
     student_id: int
-    record_date: date
+    record_date: date | None = None
     category: str
     rating: int = Field(ge=1, le=5)
     teacher_note: str | None = None
@@ -21,7 +21,7 @@ class BehaviourOut(BehaviourCreate):
 
 class TeacherObservationCreate(BaseModel):
     student_id: int
-    observation_date: date
+    observation_date: date | None = None
     term: str
     academic_year: str
     observation_text: str
