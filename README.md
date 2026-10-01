@@ -31,9 +31,12 @@ Teacher input ─► Assessments / Attendance / Behaviour
 | 3 | Student, parent and teacher relationship models | ✅ Done |
 | 3 | Assessment, attendance, behaviour, observation and analytics models | ✅ Done |
 | 3 | Cohort percentile service | ✅ Done |
-| 3 | Teacher, attendance and behaviour API routes | 🚧 Written, not yet registered in `main.py` |
+| 3 | Teacher API routes (students, assessments, attendance, behaviour, observations) | ✅ Done |
 | 3 | CatBoost training pipeline and evaluation (`ml_training/`) | ✅ Done |
 | 3 | CatBoost backend service (load model, store probability) | 🚧 Next |
+| 3 | Code review fixes (router syntax, package files, token errors, frontend paths) | ✅ Done |
+| 3 | Security and validation hardening | ⏳ Planned |
+| 3 | Admin API (students, teacher assignments, parent links) | ⏳ Planned |
 | 4 | Expert-based intervention rules | ⏳ Planned |
 | 4 | Adaptive parent communication | ⏳ Planned |
 | 4 | Teacher monitoring workflow (UI → database → analytics) | ⏳ Planned |
