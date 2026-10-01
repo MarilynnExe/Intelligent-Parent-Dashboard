@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Teacher Dashboard | Intelligent Parent Dashboard
+    </title>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/teacher-dashboard.css">
+
+</head>
+
+
+<body>
+
+    <header class="navbar">
+
+        <div class="nav-brand">
+            Intelligent School Portal
+        </div>
+
+        <div class="nav-user-info">
+
+            <span id="user-display-name">
+                Loading...
+            </span>
+
+            <span class="role-badge">
+                Teacher
+            </span>
+
+            <button
+                id="logout-btn"
+                class="btn btn-outline-danger">
+                Logout
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <nav class="sub-nav">
+
+        <a href="#" class="active">
+            Class Overview
+        </a>
+
+        <a href="#">
+            Enter Grades
+        </a>
+
+        <a href="#">
+            Daily Attendance
+        </a>
+
+        <a href="#">
+            Behaviour & Observations
+        </a>
+
+    </nav>
+
+
+    <main class="dashboard-container">
+
+        <div class="welcome-card">
+
+            <h2>
+                Welcome, Teacher
+            </h2>
+
+            <p>
+                Monitor learner progress and record
+                academic, attendance and behavioural data.
+            </p>
+
+        </div>
+
+
+        <div class="teacher-grid">
+
+            <div class="teacher-card">
+
+                <h3>
+                    Class Overview
+                </h3>
+
+                <p>
+                    View learners assigned to your
+                    classes.
+                </p>
+
+            </div>
+
+
+            <div class="teacher-card">
+
+                <h3>
+                    Enter Grades
+                </h3>
+
+                <p>
+                    Record assignments, quizzes,
+                    CATs, exams and projects.
+                </p>
+
+            </div>
+
+
+            <div class="teacher-card">
+
+                <h3>
+                    Daily Attendance
+                </h3>
+
+                <p>
+                    Record learner attendance
+                    and attendance remarks.
+                </p>
+
+            </div>
+
+
+            <div class="teacher-card">
+
+                <h3>
+                    Behaviour & Observations
+                </h3>
+
+                <p>
+                    Record participation,
+                    behaviour and teacher observations.
+                </p>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="js/api.js"></script>
+    <script src="js/teacher-dashboard.js"></script>
+
+</body>
+
+</html>

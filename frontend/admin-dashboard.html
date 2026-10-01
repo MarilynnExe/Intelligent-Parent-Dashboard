@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | Intelligent Parent Dashboard</title>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/admin-dashboard.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+
+        <div class="nav-brand">
+            Intelligent School Portal
+        </div>
+
+        <div class="nav-user-info">
+
+            <span id="user-display-name">
+                Loading...
+            </span>
+
+            <span class="role-badge">
+                Admin
+            </span>
+
+            <button
+                id="logout-btn"
+                class="btn btn-outline-danger">
+                Logout
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <nav class="sub-nav">
+
+        <a href="#" class="active">
+            Overview
+        </a>
+
+        <a href="#">
+            User Management
+        </a>
+
+        <a href="#">
+            Student Records
+        </a>
+
+        <a href="#">
+            Teacher Assignments
+        </a>
+
+    </nav>
+
+
+    <main class="dashboard-container">
+
+        <div class="welcome-card">
+
+            <h2>
+                Welcome to the Administration Console
+            </h2>
+
+            <p>
+                Manage users, student records and
+                school-wide system activities.
+            </p>
+
+        </div>
+
+
+        <div class="admin-grid">
+
+            <div class="admin-card">
+                <h3>User Management</h3>
+                <p>
+                    Manage administrators, teachers
+                    and parents.
+                </p>
+            </div>
+
+            <div class="admin-card">
+                <h3>Student Records</h3>
+                <p>
+                    View and manage learner records.
+                </p>
+            </div>
+
+            <div class="admin-card">
+                <h3>Teacher Assignments</h3>
+                <p>
+                    Manage teacher class and subject
+                    assignments.
+                </p>
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="js/api.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+
+</body>
+
+</html>

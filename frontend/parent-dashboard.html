@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Parent Dashboard | Intelligent Parent Dashboard
+    </title>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/parent-dashboard.css">
+
+</head>
+
+
+<body>
+
+    <header class="navbar">
+
+        <div class="nav-brand">
+            Intelligent School Portal
+        </div>
+
+        <div class="nav-user-info">
+
+            <span id="user-display-name">
+                Loading...
+            </span>
+
+            <span class="role-badge">
+                Parent
+            </span>
+
+            <button
+                id="logout-btn"
+                class="btn btn-outline-danger">
+                Logout
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <nav class="sub-nav">
+
+        <a href="#" class="active">
+            Student Progress
+        </a>
+
+        <a href="#">
+            Academics & Percentiles
+        </a>
+
+        <a href="#">
+            Attendance & Habits
+        </a>
+
+        <a href="#">
+            Support Recommendations
+        </a>
+
+    </nav>
+
+
+    <main class="dashboard-container">
+
+        <div class="welcome-card">
+
+            <h2>
+                Welcome, Parent
+            </h2>
+
+            <p>
+                Monitor your child's academic progress,
+                attendance, behaviour and development.
+            </p>
+
+        </div>
+
+
+        <div class="parent-grid">
+
+            <div class="parent-card">
+
+                <h3>
+                    Student Progress
+                </h3>
+
+                <p>
+                    View your learner's overall
+                    development and academic trends.
+                </p>
+
+            </div>
+
+
+            <div class="parent-card">
+
+                <h3>
+                    Academics & Percentiles
+                </h3>
+
+                <p>
+                    View academic performance and
+                    anonymized peer comparisons.
+                </p>
+
+            </div>
+
+
+            <div class="parent-card">
+
+                <h3>
+                    Attendance & Habits
+                </h3>
+
+                <p>
+                    Monitor attendance, participation
+                    and behavioural indicators.
+                </p>
+
+            </div>
+
+
+            <div class="parent-card">
+
+                <h3>
+                    Support Recommendations
+                </h3>
+
+                <p>
+                    View system-generated guidance
+                    for supporting your learner.
+                </p>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <script src="js/api.js"></script>
+    <script src="js/parent-dashboard.js"></script>
+
+</body>
+
+</html>

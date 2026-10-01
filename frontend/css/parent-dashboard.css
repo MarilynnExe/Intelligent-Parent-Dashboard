@@ -1,0 +1,26 @@
+.parent-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+
+    gap: 1.5rem;
+}
+
+.parent-card {
+    background: var(--card-bg);
+
+    padding: 1.5rem;
+
+    border-radius: 10px;
+
+    border: 1px solid var(--border-color);
+}
+
+.parent-card h3 {
+    margin-bottom: 0.5rem;
+}
+
+.parent-card p {
+    color: var(--text-muted);
+}
