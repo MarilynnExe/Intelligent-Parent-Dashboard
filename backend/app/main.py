@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import Base, engine
-from app.models.user import User
+from app import models  # noqa: F401  (registers every table with Base)
 from app.routers.auth import router as auth_router
+from app.routers.teacher import router as teacher_router
 
 
 Base.metadata.create_all(bind=engine)
@@ -26,6 +27,11 @@ app.add_middleware(
 
 app.include_router(
     auth_router,
+    prefix="/api"
+)
+
+app.include_router(
+    teacher_router,
     prefix="/api"
 )
 
