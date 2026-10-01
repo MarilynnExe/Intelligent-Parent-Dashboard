@@ -1,0 +1,35 @@
+{
+  "model_file": "catboost_at_risk.cbm",
+  "trained_at": "2026-10-01T01:17:51.216662+00:00",
+  "catboost_version": "1.2.10",
+  "feature_columns": [
+    "first_term_pct",
+    "latest_term_pct",
+    "grade_trend",
+    "cohort_percentile",
+    "absences"
+  ],
+  "target": "at_risk: final grade below 50%",
+  "decision_threshold": 0.5,
+  "training_records": 835,
+  "test_records": 209,
+  "parameters": {
+    "iterations": 500,
+    "learning_rate": 0.03,
+    "depth": 4,
+    "l2_leaf_reg": 5,
+    "loss_function": "Logloss",
+    "random_seed": 42,
+    "verbose": false
+  },
+  "test_metrics": {
+    "roc_auc": 0.9769,
+    "pr_auc": 0.931,
+    "accuracy": 0.9187,
+    "precision": 0.8537,
+    "recall": 0.7609,
+    "f1": 0.8046,
+    "brier_score": 0.0524,
+    "log_loss": 0.1596
+  }
+}
