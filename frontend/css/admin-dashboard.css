@@ -487,3 +487,23 @@ body {
         grid-template-columns: 1fr;
     }
 }
+/* Buttons used by admin forms (same as teacher dashboard) */
+.btn-pink {
+    background-color: var(--pastel-pink-accent);
+    color: #ffffff;
+    border: 1px solid transparent;
+}
+
+.btn-pink:hover:not(:disabled) {
+    background-color: #db2777;
+}
+
+.btn-outline-purple {
+    background: transparent;
+    color: var(--pastel-purple-text);
+    border: 1.5px solid var(--pastel-purple-accent);
+}
+
+.btn-outline-purple:hover:not(:disabled) {
+    background: var(--pastel-purple-bg);
+}
