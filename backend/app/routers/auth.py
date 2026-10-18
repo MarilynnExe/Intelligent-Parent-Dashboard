@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.core.security import (
     create_access_token,
-    decode_access_token,
     verify_password,
 )
 from app.models.user import User
@@ -70,21 +70,10 @@ def login(
     }
 
 
-@router.get("/me")
-def get_current_user(token: str):
-
-    try:
-        payload = decode_access_token(token)
-
-        return {
-            "message": "Token is valid",
-            "user_id": payload.get("sub"),
-            "username": payload.get("username"),
-            "role": payload.get("role")
-        }
-
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token"
-        )
+@router.get("/me", response_model=UserInfo)
+def read_current_user(
+    current_user: User = Depends(get_current_user)
+):
+    # Token comes from the Authorization: Bearer header, never the URL,
+    # so it doesn't end up in server or proxy logs.
+    return current_user
