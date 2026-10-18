@@ -1,13 +1,15 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+NonBlankStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class UserCreate(BaseModel):
-    full_name: str
-    email_or_username: str
-    password: str
+    full_name: NonBlankStr
+    email_or_username: NonBlankStr
+    password: str = Field(min_length=8)
     role: str
     phone_number: Optional[str] = None
 
