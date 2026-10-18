@@ -733,9 +733,15 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             showToast(
-                `Daily attendance successfully saved for ${entries.length} learners!`,
+                `Daily attendance successfully saved for ${data.updated} learners!`,
                 "success"
             );
+            if (data.skipped_student_ids && data.skipped_student_ids.length > 0) {
+                showToast(
+                    `${data.skipped_student_ids.length} learner(s) were skipped because they are not in your assigned classes.`,
+                    "error"
+                );
+            }
 
         } catch (err) {
             console.error("Attendance Submit Error:", err);

@@ -1,13 +1,17 @@
 from datetime import date
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel
+
+
+# Only "Absent" counts toward the risk model, so free-text values would be silently ignored.
+AttendanceStatus = Literal["Present", "Absent", "Late", "Excused"]
 
 
 class AttendanceCreate(BaseModel):
     student_id: int
     record_date: date
-    status: str
+    status: AttendanceStatus
     remarks: str | None = None
 
 
@@ -21,7 +25,7 @@ class AttendanceOut(AttendanceCreate):
 
 class AttendanceEntry(BaseModel):
     student_id: int
-    status: str
+    status: AttendanceStatus
     remarks: str | None = None
 
 

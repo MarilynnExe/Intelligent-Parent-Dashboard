@@ -302,6 +302,7 @@ def record_bulk_attendance(
     db: Session = Depends(get_db)
 ):
     updated = 0
+    skipped = []
 
     for item in data.entries:
 
@@ -315,6 +316,7 @@ def record_bulk_attendance(
         )
 
         if not student:
+            skipped.append(item.student_id)
             continue
 
         # SECURITY CHECK
@@ -334,6 +336,7 @@ def record_bulk_attendance(
         )
 
         if not authorized:
+            skipped.append(item.student_id)
             continue
 
         existing = (
@@ -375,7 +378,10 @@ def record_bulk_attendance(
         "message": (
             f"Attendance updated for "
             f"{updated} learners."
-        )
+        ),
+        "updated": updated,
+        # Unknown learners or learners outside this teacher's classes
+        "skipped_student_ids": skipped
     }
 
 @router.post("/behaviour")
