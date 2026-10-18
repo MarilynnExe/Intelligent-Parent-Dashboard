@@ -432,3 +432,27 @@ def test_analytics_calculate_route_end_to_end(db_session):
     )
     assert query_result.analytics_id == result.analytics_id
     assert query_result.support_probability == result.support_probability
+
+
+def test_absences_counted_only_within_term(db_session):
+    """Absences from other terms or years must not feed the current term's analytics."""
+    from app.routers.analytics import count_term_absences
+
+    teacher = User(full_name="T", email_or_username="t-abs@school.ke", password_hash="x", role="TEACHER")
+    student = Student(
+        admission_number="ADM300", first_name="Joy", last_name="Akinyi",
+        date_of_birth=date(2014, 6, 1), grade_level="Grade 7", stream="East",
+    )
+    db_session.add_all([teacher, student])
+    db_session.commit()
+
+    for day in (date(2026, 2, 3), date(2026, 4, 30), date(2026, 5, 4), date(2025, 2, 3)):
+        db_session.add(Attendance(
+            student_id=student.student_id, record_date=day,
+            status="Absent", recorded_by_teacher_id=teacher.user_id,
+        ))
+    db_session.commit()
+
+    assert count_term_absences(db_session, student.student_id, "Term 1", "2026") == 2
+    assert count_term_absences(db_session, student.student_id, "Term 2", "2026") == 1
+    assert count_term_absences(db_session, student.student_id, "Term 1", "2025") == 1

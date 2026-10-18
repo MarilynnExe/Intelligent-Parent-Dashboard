@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.academic_calendar import term_date_range
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.models.academic import Assessment, CohortPercentile
@@ -99,6 +100,26 @@ def verify_student_access(
     )
 
 
+def count_term_absences(db: Session, student_id: int, term: str, academic_year: str) -> int:
+    """Count a student's absences recorded within the given term's date window."""
+    try:
+        start, end = term_date_range(term, academic_year)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return (
+        db.query(func.count(Attendance.attendance_id))
+        .filter(
+            Attendance.student_id == student_id,
+            Attendance.status == "Absent",
+            Attendance.record_date >= start,
+            Attendance.record_date <= end,
+        )
+        .scalar()
+        or 0
+    )
+
+
 @router.post(
     "/calculate/{student_id}",
     response_model=StudentAnalyticsOut,
@@ -164,16 +185,8 @@ def calculate_student_analytics(
         academic_year=academic_year,
     )
 
-    # 3. Feature 3: absences (Period-to-date mapped to benchmark scale)
-    absences_count = (
-        db.query(func.count(Attendance.attendance_id))
-        .filter(
-            Attendance.student_id == student_id,
-            Attendance.status == "Absent",
-        )
-        .scalar()
-        or 0
-    )
+    # 3. Feature 3: absences (this term only, mapped to benchmark scale)
+    absences_count = count_term_absences(db, student_id, term, academic_year)
 
     mapped_absences = map_period_absences_to_model_feature(
         period_absences=absences_count,
@@ -324,15 +337,7 @@ def get_student_analytics(
     )
     cohort_percentile = float(cohort_record.percentile_rank) if cohort_record else None
 
-    absences_count = (
-        db.query(func.count(Attendance.attendance_id))
-        .filter(
-            Attendance.student_id == student_id,
-            Attendance.status == "Absent",
-        )
-        .scalar()
-        or 0
-    )
+    absences_count = count_term_absences(db, student_id, term, academic_year)
 
     return StudentAnalyticsOut(
         analytics_id=analytics.analytics_id,
