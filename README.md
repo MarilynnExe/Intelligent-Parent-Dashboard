@@ -33,30 +33,37 @@ Teacher input ─► Assessments / Attendance / Behaviour
 | 3 | Cohort percentile service | ✅ Done |
 | 3 | Teacher API routes (students, assessments, attendance, behaviour, observations) | ✅ Done |
 | 3 | CatBoost training pipeline and evaluation (`ml_training/`) | ✅ Done |
-| 3 | CatBoost backend service (load model, store probability) | 🚧 Next |
+| 3 | CatBoost backend service (load model, calibrate, store probability) | ✅ Done |
 | 3 | Code review fixes (router syntax, package files, token errors, frontend paths) | ✅ Done |
-| 3 | Security and validation hardening | ⏳ Planned |
-| 3 | Admin API (students, teacher assignments, parent links) | ⏳ Planned |
-| 4 | Expert-based intervention rules | ⏳ Planned |
+| 3 | Security and validation hardening | 🚧 In progress |
+| 3 | Admin API (students, teacher assignments, parent links) | ✅ Done |
+| 4 | Expert-based intervention rules | ✅ Done |
 | 4 | Adaptive parent communication | ⏳ Planned |
-| 4 | Teacher monitoring workflow (UI → database → analytics) | ⏳ Planned |
-| 4 | Parent dashboard with intelligent insights | ⏳ Planned |
+| 4 | Teacher monitoring workflow (UI → database → analytics) | ✅ Done |
+| 4 | Functional audit fixes (live percentiles, term-scoped absences, input validation, admin UI, behaviour & notes UI, term picker) | ✅ Done |
+| 4 | Parent dashboard with intelligent insights | ✅ Done |
 
 ## CatBoost model
 
-Trained on the UCI Student Performance dataset (1,044 records, 662 students) to predict whether a student is at risk of failing (final grade below 50%). Only features the dashboard can compute from its own data are used: first and latest term percentages, grade trend, cohort percentile and absences.
+Trained on the UCI Student Performance dataset (1,044 records, 662 students) to predict whether a student is at risk of failing (final grade below 50%). It is an early-warning model: it only uses three indicators the dashboard can compute from a single term of its own data, in this order:
+
+1. Term assessment average (%)
+2. Cohort percentile within the learner's grade and stream
+3. Absences in the term, scaled to a full-year count
+
+Raw CatBoost probabilities are calibrated with Platt scaling before they are shown.
 
 Held-out test set (209 records, grouped by student):
 
-| Metric | CatBoost | Logistic regression baseline |
+| Metric | CatBoost (calibrated) | Logistic regression baseline |
 |---|---|---|
-| ROC AUC | 0.977 | 0.973 |
-| Accuracy | 91.9% | 91.4% |
-| Recall (at-risk) | 76.1% | 73.9% |
-| Precision (at-risk) | 85.4% | 85.0% |
-| Brier score | 0.052 | 0.056 |
+| ROC AUC | 0.960 | 0.953 |
+| Accuracy | 90.0% | 90.4% |
+| Recall (at-risk) | 73.9% | 76.1% |
+| Precision (at-risk) | 79.1% | 79.6% |
+| Brier score | 0.067 | 0.070 |
 
-Full results and limitations: [ml_training/reports/evaluation.md](ml_training/reports/evaluation.md)
+CatBoost ranks learners slightly better (higher ROC AUC) and is better calibrated (lower Brier score); the baseline is marginally ahead at the 0.5 threshold. Full results and limitations: [ml_training/reports/evaluation.md](ml_training/reports/evaluation.md)
 
 ## Project structure
 
@@ -83,6 +90,15 @@ python train_catboost.py
 cd ../backend
 uvicorn app.main:app --reload
 ```
+
+## Running the tests
+
+```bash
+cd backend
+python -m pytest tests -q
+```
+
+The tests use a temporary SQLite database, so they never touch the MySQL database in `backend/.env`.
 
 ## Data source
 
