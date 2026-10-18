@@ -1,7 +1,14 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load from backend/.env or root .env
+BASE_DIR = Path(__file__).resolve().parents[2]
+env_path = BASE_DIR / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()
 
 
 PROJECT_NAME = "Intelligent Parent Dashboard System"

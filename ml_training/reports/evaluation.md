@@ -1,69 +1,94 @@
-# CatBoost At-Risk Model — Evaluation Report
+# CatBoost At-Risk Early-Warning Model — Evaluation Report
 
-Generated: 2026-10-01 01:17 UTC
+Generated: 2026-10-06 10:36 UTC
 
-## Data
+## 1. Study Overview & Methodological Safeguards
 
-- Source: UCI Student Performance (Cortez & Silva, 2008), mathematics and
-  Portuguese classes, two Portuguese secondary schools.
-- Records: 1044 (662 unique students)
-- Target: `at_risk` = final grade below 10/20
-  (22.0% of records)
-- Train: 835 records, test: 209 records. The split is
-  grouped by student, so no student appears in both sets.
+- **Project:** Intelligent Parent Dashboard System for Early Learner Intervention Using CatBoost
+- **Problem Formulation:** Early-warning prediction of student academic failure using only data available at Period 1.
+- **Dataset:** UCI Student Performance (Cortez & Silva, 2008), combining Mathematics (395 records) and Portuguese (649 records) classes (Total: 1044 records across 662 unique student identity groups).
+- **Target:** `at_risk = 1` if final grade $G3 < 10/20$ (benchmark failure threshold), `0` otherwise.
+  - *Context clarification:* The $G3 < 10$ cutoff is strictly an empirical UCI benchmark failure mark under the Portuguese 20-point scale. It is NOT a Kenyan grading, CBC, or KCSE threshold.
+- **Leakage Prevention:**
+  - $G2$ (second-term assessment) has been completely eradicated from features, eliminating temporal lookahead leakage.
+  - All features represent only information available at Period 1.
+  - Outer data split uses `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)` across 13 student demographic attributes, guaranteeing that the same student appearing in both subjects is never present in both training and test sets.
+  - Percentile rankings are computed strictly within training folds, ensuring zero reference-pool leakage.
 
-## Features
+## 2. Dataset Split & Class Distribution
 
-| Feature | Dashboard source |
-|---|---|
-| `first_term_pct` | Assessment percentage, first period |
-| `latest_term_pct` | Assessment percentage, latest period |
-| `grade_trend` | latest − first |
-| `cohort_percentile` | CohortPercentile.percentile_rank |
-| `absences` | Attendance records with status Absent |
+- **Development Pool:** 835 records (530 unique students), At-risk prevalence: 22.0% (184 at risk).
+- **Locked Test Set:** 209 records (132 unique students), At-risk prevalence: 22.0% (46 at risk).
+- **Student Group Overlap:** Exactly 0 overlapping student identities between Development Pool and Test Set.
 
-## Cross-validation (training set, 5 grouped folds, mean ± std)
+## 3. Predictor Set (Period 1 Only)
 
-| Model | roc_auc | pr_auc | accuracy | precision | recall | f1 | brier_score | log_loss |
+| Feature | Type | Source & Formula | Dashboard Mapping |
+|---|---|---|---|
+| `first_term_pct` | Continuous | $G1 / 20 \times 100$ | First assessment percentage |
+| `cohort_percentile` | Continuous | Grouped by `(school, subject)` on `first_term_pct`: $(N_{<} + 0.5 N_{=}) / N \times 100$ | CohortPercentile service |
+| `absences` | Discrete | Total student absences | Attendance records (status "Absent") |
+
+## 4. Inner Cross-Validation (Development Pool, 4 Grouped Folds)
+
+Metrics across 4 out-of-fold validation splits on the Development Pool (mean ± std):
+
+| Model | brier_score | log_loss | roc_auc | pr_auc | accuracy | precision | recall | f1 |
 |---|---|---|---|---|---|---|---|---|
-| CatBoost | 0.968 ± 0.012 | 0.910 ± 0.032 | 0.920 ± 0.020 | 0.849 ± 0.064 | 0.777 ± 0.038 | 0.811 ± 0.046 | 0.058 ± 0.012 | 0.187 ± 0.045 |
-| Logistic regression (baseline) | 0.974 ± 0.012 | 0.927 ± 0.032 | 0.932 ± 0.016 | 0.888 ± 0.063 | 0.793 ± 0.029 | 0.837 ± 0.037 | 0.052 ± 0.010 | 0.167 ± 0.028 |
+| CatBoost | 0.0855 ± 0.0082 | 0.2753 ± 0.0171 | 0.9344 ± 0.0090 | 0.7847 ± 0.0409 | 0.8731 ± 0.0087 | 0.7381 ± 0.0383 | 0.6630 ± 0.0392 | 0.6969 ± 0.0191 |
+| Logistic regression (baseline) | 0.0831 ± 0.0068 | 0.2613 ± 0.0135 | 0.9364 ± 0.0069 | 0.8106 ± 0.0311 | 0.8850 ± 0.0113 | 0.7650 ± 0.0261 | 0.6902 ± 0.0322 | 0.7255 ± 0.0283 |
 
-## Held-out test set
+## 5. Locked Test Set Evaluation
 
-| Model | roc_auc | pr_auc | accuracy | precision | recall | f1 | brier_score | log_loss |
+Performance of all benchmark models on the untouched test set (N=209):
+
+| Model | brier_score | log_loss | roc_auc | pr_auc | accuracy | precision | recall | f1 |
 |---|---|---|---|---|---|---|---|---|
-| CatBoost | 0.977 | 0.931 | 0.919 | 0.854 | 0.761 | 0.805 | 0.052 | 0.160 |
-| Logistic regression (baseline) | 0.973 | 0.920 | 0.914 | 0.850 | 0.739 | 0.791 | 0.056 | 0.175 |
+| Prevalence Baseline | 0.1717 | 0.5270 | 0.5000 | 0.2201 | 0.7799 | 0.0000 | 0.0000 | 0.0000 |
+| Logistic regression (baseline) | 0.0703 | 0.2624 | 0.9534 | 0.8082 | 0.9043 | 0.7955 | 0.7609 | 0.7778 |
+| CatBoost (Uncalibrated) | 0.0666 | 0.2193 | 0.9599 | 0.8517 | 0.8995 | 0.7778 | 0.7609 | 0.7692 |
+| CatBoost (Calibrated - Platt) | 0.0670 | 0.2298 | 0.9599 | 0.8517 | 0.8995 | 0.7907 | 0.7391 | 0.7640 |
 
-Decision threshold for accuracy, precision, recall and F1: 0.5
+*Decision threshold for binary metrics (Accuracy, Precision, Recall, F1): 0.5*
 
-### CatBoost confusion matrix (test set)
+### Calibrated CatBoost Confusion Matrix (Locked Test Set)
 
-| | Predicted not at risk | Predicted at risk |
-|---|---|---|
-| Actually not at risk | 157 | 6 |
-| Actually at risk | 11 | 35 |
+| | Predicted Not at Risk ($\\hat{y}=0$) | Predicted At Risk ($\\hat{y}=1$) | Total |
+|---|---|---|---|
+| **Actually Not at Risk ($y=0$)** | 154 (True Negatives) | 9 (False Positives) | 163 |
+| **Actually At Risk ($y=1$)** | 12 (False Negatives) | 34 (True Positives) | 46 |
+| **Total** | 166 | 43 | 209 |
 
-## Feature importance
+## 6. Probability Calibration Analysis (Platt Scaling)
 
-- `latest_term_pct`: 41.6%
-- `first_term_pct`: 21.9%
-- `absences`: 16.2%
-- `cohort_percentile`: 16.2%
-- `grade_trend`: 4.0%
+- **Calibrator Architecture:** Sigmoid Platt scaling ($\\text{LogisticRegression}(C=10^5)$) fitted on 835 Out-of-Fold (OOF) probabilities from inner cross-validation.
+- **Calibrator Parameters:** Slope ($w$): 6.0160, Intercept ($b$): -3.2113.
+- **Expected Calibration Error (ECE):** 0.0601 (6.01%)
+- **Maximum Calibration Error (MCE):** 0.3765 (37.65%)
 
-![Evaluation plots](evaluation.png)
+### Reliability Table (5 Uniform Bins on Test Set)
 
-## Limitations
+| Probability Bin | Test Count | Mean Predicted Prob | Observed At-Risk Rate | Absolute Error |
+|---|---|---|---|---|
+| [0.0, 0.2) | 150 | 0.0572 | 0.0133 | 0.0439 |
+| [0.2, 0.4) | 9 | 0.2901 | 0.6667 | 0.3765 |
+| [0.4, 0.6) | 15 | 0.4887 | 0.5333 | 0.0446 |
+| [0.6, 0.8) | 14 | 0.6783 | 0.7857 | 0.1074 |
+| [0.8, 1.0] | 21 | 0.8847 | 0.9048 | 0.0201 |
 
-- The data comes from two Portuguese schools (2005–2006) and is graded out
-  of 20. The dashboard converts all marks to percentages, but the model has
-  not been validated on Kenyan school data.
-- `absences` in the source data is counted over the whole school year.
-  Early in a term the dashboard will see fewer absences than the model was
-  trained on, which may understate risk.
-- Behaviour records and teacher observations are not in the training data.
-  They are used by the expert rules, not by this model.
-- The model predicts the probability of failing the final assessment. It is
-  a support signal for teachers and parents, not a judgement of the student.
+## 7. Feature Importance (CatBoost)
+
+- `first_term_pct`: 57.96%
+- `cohort_percentile`: 28.24%
+- `absences`: 13.80%
+
+## 8. Evaluation Visualizations
+
+![Evaluation Plots](evaluation.png)
+
+## 9. Academic Limitations & Contextual Discussion
+
+1. **Benchmark vs. Deployment Context:** The training data originates from two Portuguese secondary schools (Cortez & Silva, 2008) under a 20-point system. Although normalized to percentages (0-100%), the model has not yet been fine-tuned on Kenyan educational data (CBC / KCSE).
+2. **Absences Horizon Limitation:** In the UCI dataset, `absences` reflects full-year cumulative attendance. In live early-warning deployment at Period 1, observed absences will naturally be lower than full-year counts. Calibration adjustments or annualized attendance rates should be considered during live deployment.
+3. **Sociological & Behavioral Exclusion:** High-dimensional family and sociological factors were deliberately omitted to ensure strict computability from basic school operational databases and avoid algorithmic demographic bias.
+4. **Decision Support Nature:** The model outputs an advisory probability for early parental and teacher intervention, not an autonomous high-stakes academic determination.

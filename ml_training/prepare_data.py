@@ -1,17 +1,21 @@
 """
-Prepare the UCI Student Performance dataset for CatBoost training.
+Prepare the UCI Student Performance dataset for early-warning CatBoost training.
 
 Only features that the Intelligent Parent Dashboard can compute from its own
-database are kept, so the trained model can be used on real students:
+database at Period 1 (early intervention) are kept:
 
-    first_term_pct    <- Assessment.percentage (first assessment period)
-    latest_term_pct   <- Assessment.percentage (most recent assessment period)
-    grade_trend       <- latest_term_pct - first_term_pct
-    cohort_percentile <- CohortPercentile.percentile_rank
+    first_term_pct    <- Assessment.percentage (first assessment period: G1 / 20 * 100)
+    cohort_percentile <- CohortPercentile.percentile_rank (ranked on first-term performance)
     absences          <- count of Attendance records with status "Absent"
 
+NOTE ON TEMPORAL LEAKAGE REMOVAL:
+    G2 (latest_term_pct and grade_trend) has been completely removed to avoid
+    temporal leakage. The system aims for early-warning intervention after Period 1.
+
 Target:
-    at_risk = 1 when the final grade (G3) is below 10 out of 20 (a fail).
+    at_risk = 1 when the final grade (G3) is below 10 out of 20 (benchmark threshold).
+    The G3 < 10 threshold is a benchmark definition based on the UCI Portuguese
+    grading context (fail mark). It is NOT a Kenyan grading/CBC/KCSE threshold.
 
 Source: Cortez & Silva (2008), UCI Machine Learning Repository, CC BY 4.0.
 """
@@ -37,8 +41,6 @@ STUDENT_IDENTITY_COLUMNS = [
 
 FEATURE_COLUMNS = [
     "first_term_pct",
-    "latest_term_pct",
-    "grade_trend",
     "cohort_percentile",
     "absences"
 ]
@@ -48,7 +50,7 @@ TARGET_COLUMN = "at_risk"
 
 def cohort_percentile(scores: pd.Series) -> pd.Series:
     """
-    Percentile rank using the same formula as PercentileService:
+    Percentile rank using the standard midpoint percentile formula:
     (number below + 0.5 * number equal) / cohort size * 100
     """
     values = scores.to_numpy()
@@ -76,23 +78,22 @@ def load_raw_data() -> pd.DataFrame:
 def build_features(raw: pd.DataFrame) -> pd.DataFrame:
     data = pd.DataFrame()
 
+    # Period 1 performance: G1 / 20 * 100
     data["first_term_pct"] = raw["G1"] / MAX_GRADE * 100
-    data["latest_term_pct"] = raw["G2"] / MAX_GRADE * 100
-    data["grade_trend"] = data["latest_term_pct"] - data["first_term_pct"]
 
-    # Cohort = same school and subject, ranked on the average of the
-    # assessments available before the final exam.
-    average_pct = (data["first_term_pct"] + data["latest_term_pct"]) / 2
+    # Cohort = same school and subject, ranked strictly on Period 1 performance
     cohort_keys = [raw["school"], raw["subject"]]
     data["cohort_percentile"] = (
-        average_pct.groupby(cohort_keys).transform(cohort_percentile)
+        data["first_term_pct"].groupby(cohort_keys).transform(cohort_percentile)
     )
 
+    # Attendance: total absences
     data["absences"] = raw["absences"]
 
+    # Target: G3 < 10 (UCI benchmark cutoff)
     data[TARGET_COLUMN] = (raw["G3"] < PASS_MARK).astype(int)
 
-    # Used only to keep the same student out of both train and test sets.
+    # Student identity grouping across math and portuguese datasets
     data["student_group"] = (
         raw[STUDENT_IDENTITY_COLUMNS]
         .astype(str)

@@ -2,150 +2,263 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <title>
-        Parent Dashboard | Intelligent Parent Dashboard
-    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Portal | Intelligent Parent Dashboard</title>
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/parent-dashboard.css">
-
 </head>
-
 
 <body>
 
-    <header class="navbar">
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
 
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
         <div class="nav-brand">
-            Intelligent School Portal
+            <span class="nav-brand-icon">🏡</span>
+            <span>Intelligent School Portal</span>
         </div>
 
         <div class="nav-user-info">
-
-            <span id="user-display-name">
-                Loading...
-            </span>
-
-            <span class="role-badge">
-                Parent
-            </span>
-
-            <button
-                id="logout-btn"
-                class="btn btn-outline-danger">
-                Logout
-            </button>
-
+            <span id="user-display-name">Loading parent profile...</span>
+            <span class="role-badge parent-badge">Parent</span>
+            <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout</button>
         </div>
-
     </header>
 
-
+    <!-- Sub Navigation Tabs -->
     <nav class="sub-nav">
-
-        <a href="#" class="active">
-            Student Progress
-        </a>
-
-        <a href="#">
-            Academics & Percentiles
-        </a>
-
-        <a href="#">
-            Attendance & Habits
-        </a>
-
-        <a href="#">
-            Support Recommendations
-        </a>
-
+        <button id="tab-overview" class="sub-nav-btn active" data-target="section-overview">
+            <span>📊</span>
+            <span>Overview & Guidance</span>
+        </button>
+        <button id="tab-academics" class="sub-nav-btn" data-target="section-academics">
+            <span>📚</span>
+            <span>Academic Performance & Percentiles</span>
+        </button>
+        <button id="tab-attendance" class="sub-nav-btn" data-target="section-attendance">
+            <span>📅</span>
+            <span>Attendance & Habits</span>
+        </button>
     </nav>
 
-
+    <!-- Main Dashboard Container -->
     <main class="dashboard-container">
 
-        <div class="welcome-card">
-
-            <h2>
-                Welcome, Parent
-            </h2>
-
-            <p>
-                Monitor your child's academic progress,
-                attendance, behaviour and development.
-            </p>
-
+        <!-- Child Selector Bar (for parents with 1 or multiple children) -->
+        <div class="child-selector-card">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-heading);">Select Learner:</span>
+                <select id="child-selector" class="child-select" aria-label="Select Learner">
+                    <option value="" disabled selected>Loading your registered children...</option>
+                </select>
+            </div>
+            <div id="child-selector-count" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
+                —
+            </div>
         </div>
 
-
-        <div class="parent-grid">
-
-            <div class="parent-card">
-
-                <h3>
-                    Student Progress
-                </h3>
-
-                <p>
-                    View your learner's overall
-                    development and academic trends.
-                </p>
-
+        <!-- Child Profile Hero Banner -->
+        <div id="child-profile-banner" class="child-profile-banner" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div class="child-avatar">🎓</div>
+                <div class="child-info">
+                    <h2 id="child-full-name">Learner Name</h2>
+                    <div class="child-meta-tags">
+                        <span id="child-adm" class="meta-pill">ADM: —</span>
+                        <span id="child-grade-stream" class="meta-pill">Grade: —</span>
+                        <span id="child-relation" class="meta-pill">Relationship: —</span>
+                    </div>
+                </div>
             </div>
-
-
-            <div class="parent-card">
-
-                <h3>
-                    Academics & Percentiles
-                </h3>
-
-                <p>
-                    View academic performance and
-                    anonymized peer comparisons.
-                </p>
-
+            <div id="child-status-header">
+                <span id="badge-overall-status" class="status-pill status-monitoring">
+                    Checking Status...
+                </span>
             </div>
+        </div>
 
+        <!-- Global State / Loading Indicator -->
+        <div id="global-loading" class="state-box">
+            <div class="state-spinner"></div>
+            <p>Retrieving your learner's academic progress & CatBoost early-intervention report...</p>
+        </div>
 
-            <div class="parent-card">
+        <!-- Global Empty State -->
+        <div id="global-empty" class="state-box" style="display: none;">
+            <p style="font-size: 1.1rem; color: var(--text-muted);">
+                No learner records are currently linked to your parent account.
+            </p>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">
+                Please contact the school administration to link your child's admission profile.
+            </p>
+        </div>
 
-                <h3>
-                    Attendance & Habits
-                </h3>
+        <!-- Main Content Area -->
+        <div id="main-content" style="display: none;">
 
-                <p>
-                    Monitor attendance, participation
-                    and behavioural indicators.
-                </p>
+            <!-- ============================================================= -->
+            <!-- TAB 1: OVERVIEW & GUIDANCE                                    -->
+            <!-- ============================================================= -->
+            <section id="section-overview" class="content-section active">
 
-            </div>
+                <!-- Parent Risk Hero Card -->
+                <div class="parent-risk-card">
+                    <div class="parent-risk-title">Early Intervention Support Estimate</div>
+                    <div id="hero-risk-probability" class="parent-risk-prob">—</div>
 
+                    <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">
+                        <span id="hero-risk-badge" class="status-pill status-monitoring">
+                            Monitoring Suggested
+                        </span>
+                    </div>
 
-            <div class="parent-card">
+                    <!-- Visual Progress Bar -->
+                    <div class="parent-risk-bar">
+                        <div id="hero-risk-fill" class="parent-risk-fill fill-monitoring" style="width: 0%;"></div>
+                    </div>
 
-                <h3>
-                    Support Recommendations
-                </h3>
+                    <!-- Transparent Advisory Notice -->
+                    <div class="parent-advisory-box">
+                        <strong>ℹ️ Transparent Guidance for Parents:</strong>
+                        This calculated support probability is an empirical early-warning indicator derived from Period 1 indicators (first-term assessment scores, class peer comparisons, and attendance). It is designed to foster collaborative support between parents and educators, and is <em>not a final verdict on academic capability</em>.
+                    </div>
+                </div>
 
-                <p>
-                    View system-generated guidance
-                    for supporting your learner.
-                </p>
+                <!-- 3 Key Indicators Grid -->
+                <div class="metrics-tri-grid">
+                    <div class="metric-card card-purple">
+                        <div class="metric-label">Term 1 Academic Average</div>
+                        <div id="stat-academic-average" class="metric-value">—</div>
+                        <div class="metric-description">Mean of all recorded formative assessments</div>
+                    </div>
 
-            </div>
+                    <div class="metric-card card-blue">
+                        <div class="metric-label">Cohort Percentile Rank</div>
+                        <div id="stat-cohort-percentile" class="metric-value">—</div>
+                        <div id="stat-cohort-desc" class="metric-description">Relative standing within assigned stream</div>
+                    </div>
+
+                    <div class="metric-card card-pink">
+                        <div class="metric-label">Recorded Absences</div>
+                        <div id="stat-absences" class="metric-value">—</div>
+                        <div class="metric-description">School days absent to date this term</div>
+                    </div>
+                </div>
+
+                <!-- Actionable Recommendations Card -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>Actionable Pedagogical Recommendations</h3>
+                            <p>Transparent recommendations generated by the Expert System to guide home-based learning support.</p>
+                        </div>
+                    </div>
+
+                    <div id="parent-recommendations-list" class="rec-list">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 2: ACADEMIC PERFORMANCE & PERCENTILES                     -->
+            <!-- ============================================================= -->
+            <section id="section-academics" class="content-section">
+
+                <!-- Assessments Table Card -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>Formative Assessment Breakdown</h3>
+                            <p>Individual subject assessments recorded by your child's teachers.</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Assessment Type</th>
+                                    <th>Term & Year</th>
+                                    <th>Score Obtained</th>
+                                    <th>Percentage</th>
+                                    <th>Date Recorded</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assessments-tbody">
+                                <tr>
+                                    <td colspan="6" class="state-box">
+                                        <p>Loading assessment history...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Understanding Percentile Rank Card -->
+                <div class="section-card" style="background: var(--pastel-blue-bg); border-color: var(--pastel-blue-border);">
+                    <div class="section-header" style="border-bottom-color: var(--pastel-blue-border);">
+                        <div>
+                            <h3 style="color: var(--pastel-blue-text);">💡 Understanding Cohort Percentile Rank</h3>
+                            <p>How peer comparisons are computed without individual learner exposure.</p>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.92rem; line-height: 1.6; color: var(--text-body);">
+                        The cohort percentile indicates your child’s relative standing among all peers in the same grade level and stream based on Period 1 assessments. Using the standard statistical midpoint rank formula, a percentile of <strong>70th</strong> means your child performed as well as or higher than 70% of learners in their class cohort. Percentiles provide contextual insight beyond raw percentages.
+                    </p>
+                </div>
+
+            </section>
+
+            <!-- ============================================================= -->
+            <!-- TAB 3: ATTENDANCE & HABITS                                    -->
+            <!-- ============================================================= -->
+            <section id="section-attendance" class="content-section">
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <div>
+                            <h3>School Attendance & Learning Consistency</h3>
+                            <p>Regular daily attendance is a proven protective factor against academic learning gaps.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                        <div style="background: var(--pastel-pink-bg); border: 1.5px solid var(--pastel-pink-border); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; min-width: 200px;">
+                            <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--pastel-pink-text);">
+                                Term-to-Date Absences
+                            </div>
+                            <div id="attendance-count-big" style="font-size: 3rem; font-weight: 900; color: var(--pastel-pink-text); margin: 0.25rem 0;">
+                                —
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">
+                                Days Missed
+                            </div>
+                        </div>
+
+                        <div style="flex: 1; min-width: 260px;">
+                            <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--text-heading); margin-bottom: 0.5rem;">
+                                Attendance Guidance
+                            </h4>
+                            <p style="font-size: 0.92rem; line-height: 1.6; color: var(--text-body);">
+                                When learners miss classroom instruction, foundational concepts in cumulative subjects like Mathematics and Science are easily lost. If absences are unavoidable due to illness, please coordinate with the class teacher to obtain review materials and homework tasks.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
 
         </div>
 
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/parent-dashboard.js"></script>

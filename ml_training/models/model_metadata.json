@@ -1,35 +1,118 @@
 {
   "model_file": "catboost_at_risk.cbm",
-  "trained_at": "2026-10-01T01:17:51.216662+00:00",
+  "calibrator_file": "probability_calibrator.joblib",
+  "trained_at": "2026-10-06T10:36:30.680730+00:00",
   "catboost_version": "1.2.10",
   "feature_columns": [
     "first_term_pct",
-    "latest_term_pct",
-    "grade_trend",
     "cohort_percentile",
     "absences"
   ],
-  "target": "at_risk: final grade below 50%",
+  "target": "at_risk: UCI final grade G3 < 10/20 (UCI benchmark cutoff, not Kenyan policy)",
   "decision_threshold": 0.5,
-  "training_records": 835,
+  "development_records": 835,
   "test_records": 209,
+  "unique_students_total": 662,
+  "unique_students_dev": 530,
+  "unique_students_test": 132,
   "parameters": {
-    "iterations": 500,
+    "iterations": 300,
     "learning_rate": 0.03,
     "depth": 4,
-    "l2_leaf_reg": 5,
+    "l2_leaf_reg": 5.0,
     "loss_function": "Logloss",
     "random_seed": 42,
     "verbose": false
   },
   "test_metrics": {
-    "roc_auc": 0.9769,
-    "pr_auc": 0.931,
-    "accuracy": 0.9187,
-    "precision": 0.8537,
-    "recall": 0.7609,
-    "f1": 0.8046,
-    "brier_score": 0.0524,
-    "log_loss": 0.1596
+    "Prevalence Baseline": {
+      "brier_score": 0.1717,
+      "log_loss": 0.527,
+      "roc_auc": 0.5,
+      "pr_auc": 0.2201,
+      "accuracy": 0.7799,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "Logistic regression (baseline)": {
+      "brier_score": 0.0703,
+      "log_loss": 0.2624,
+      "roc_auc": 0.9534,
+      "pr_auc": 0.8082,
+      "accuracy": 0.9043,
+      "precision": 0.7955,
+      "recall": 0.7609,
+      "f1": 0.7778
+    },
+    "CatBoost (Uncalibrated)": {
+      "brier_score": 0.0666,
+      "log_loss": 0.2193,
+      "roc_auc": 0.9599,
+      "pr_auc": 0.8517,
+      "accuracy": 0.8995,
+      "precision": 0.7778,
+      "recall": 0.7609,
+      "f1": 0.7692
+    },
+    "CatBoost (Calibrated - Platt)": {
+      "brier_score": 0.067,
+      "log_loss": 0.2298,
+      "roc_auc": 0.9599,
+      "pr_auc": 0.8517,
+      "accuracy": 0.8995,
+      "precision": 0.7907,
+      "recall": 0.7391,
+      "f1": 0.764
+    }
+  },
+  "calibration": {
+    "method": "Platt scaling (logistic regression on OOF raw probabilities)",
+    "calibrator_weight": 6.016,
+    "calibrator_bias": -3.2113,
+    "expected_calibration_error": 0.0601,
+    "maximum_calibration_error": 0.3765,
+    "bins": [
+      {
+        "bin": "[0.0, 0.2)",
+        "count": 150,
+        "mean_pred": 0.05719337920744451,
+        "obs_rate": 0.013333333333333334,
+        "abs_error": 0.04386004587411117
+      },
+      {
+        "bin": "[0.2, 0.4)",
+        "count": 9,
+        "mean_pred": 0.2901480756314803,
+        "obs_rate": 0.6666666666666666,
+        "abs_error": 0.3765185910351863
+      },
+      {
+        "bin": "[0.4, 0.6)",
+        "count": 15,
+        "mean_pred": 0.48869704212211107,
+        "obs_rate": 0.5333333333333333,
+        "abs_error": 0.044636291211222257
+      },
+      {
+        "bin": "[0.6, 0.8)",
+        "count": 14,
+        "mean_pred": 0.678328498303677,
+        "obs_rate": 0.7857142857142857,
+        "abs_error": 0.10738578741060867
+      },
+      {
+        "bin": "[0.8, 1.0]",
+        "count": 21,
+        "mean_pred": 0.884661261705677,
+        "obs_rate": 0.9047619047619048,
+        "abs_error": 0.02010064305622772
+      }
+    ]
+  },
+  "feature_importance": {
+    "first_term_pct": 57.96,
+    "cohort_percentile": 28.24,
+    "absences": 13.8
   }
 }

@@ -2,150 +2,413 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <title>
-        Teacher Dashboard | Intelligent Parent Dashboard
-    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard | Intelligent Parent Dashboard</title>
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/teacher-dashboard.css">
-
 </head>
-
 
 <body>
 
-    <header class="navbar">
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
 
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
         <div class="nav-brand">
-            Intelligent School Portal
+            <span class="nav-brand-icon">🎓</span>
+            <span>Intelligent School Portal</span>
         </div>
 
         <div class="nav-user-info">
-
-            <span id="user-display-name">
-                Loading...
-            </span>
-
-            <span class="role-badge">
-                Teacher
-            </span>
-
-            <button
-                id="logout-btn"
-                class="btn btn-outline-danger">
-                Logout
-            </button>
-
+            <span id="user-display-name">Loading teacher...</span>
+            <span class="role-badge teacher-badge">Teacher</span>
+            <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout</button>
         </div>
-
     </header>
 
-
+    <!-- Sub Navigation Tabs -->
     <nav class="sub-nav">
-
-        <a href="#" class="active">
-            Class Overview
-        </a>
-
-        <a href="#">
-            Enter Grades
-        </a>
-
-        <a href="#">
-            Daily Attendance
-        </a>
-
-        <a href="#">
-            Behaviour & Observations
-        </a>
-
+        <button id="tab-overview" class="sub-nav-btn active" data-target="section-overview">
+            <span>👥</span>
+            <span>Class Overview & Analytics</span>
+        </button>
+        <button id="tab-assessments" class="sub-nav-btn" data-target="section-assessments">
+            <span>📝</span>
+            <span>Enter Assessment</span>
+        </button>
+        <button id="tab-attendance" class="sub-nav-btn" data-target="section-attendance">
+            <span>📅</span>
+            <span>Daily Attendance</span>
+        </button>
     </nav>
 
-
+    <!-- Main Dashboard Container -->
     <main class="dashboard-container">
 
-        <div class="welcome-card">
-
-            <h2>
-                Welcome, Teacher
-            </h2>
-
-            <p>
-                Monitor learner progress and record
-                academic, attendance and behavioural data.
-            </p>
-
+        <!-- Class Selector Card -->
+        <div class="class-selector-card">
+            <div class="class-selector-group">
+                <span class="class-selector-label">Active Assigned Class:</span>
+                <select id="class-selector" class="class-select" aria-label="Select Assigned Class">
+                    <option value="" disabled selected>Loading teaching assignments...</option>
+                </select>
+            </div>
+            <button id="btn-refresh-roster" class="btn btn-outline-purple btn-sm">
+                🔄 Refresh Class
+            </button>
         </div>
 
+        <!-- ================================================================= -->
+        <!-- TAB 1: CLASS OVERVIEW & ANALYTICS                                 -->
+        <!-- ================================================================= -->
+        <section id="section-overview" class="content-section active">
 
-        <div class="teacher-grid">
-
-            <div class="teacher-card">
-
-                <h3>
-                    Class Overview
-                </h3>
-
-                <p>
-                    View learners assigned to your
-                    classes.
-                </p>
-
+            <!-- Welcome Banner -->
+            <div class="welcome-banner">
+                <div>
+                    <h2 id="welcome-heading">Welcome, Teacher</h2>
+                    <p>Monitor your assigned learners, record formative indicators, and run CatBoost early intervention analytics.</p>
+                </div>
             </div>
 
-
-            <div class="teacher-card">
-
-                <h3>
-                    Enter Grades
-                </h3>
-
-                <p>
-                    Record assignments, quizzes,
-                    CATs, exams and projects.
-                </p>
-
+            <!-- Stats Strip -->
+            <div class="stats-strip">
+                <div class="stat-box stat-purple">
+                    <div class="stat-box-title">Assigned Learners</div>
+                    <div id="stat-total-students" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">In current active stream</div>
+                </div>
+                <div class="stat-box stat-pink">
+                    <div class="stat-box-title">Targeted Support</div>
+                    <div id="stat-targeted-count" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">High priority intervention</div>
+                </div>
+                <div class="stat-box stat-blue">
+                    <div class="stat-box-title">Monitoring Suggested</div>
+                    <div id="stat-monitoring-count" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Close guidance advised</div>
+                </div>
+                <div class="stat-box stat-green">
+                    <div class="stat-box-title">On Track</div>
+                    <div id="stat-ontrack-count" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Performing within benchmark</div>
+                </div>
             </div>
 
+            <!-- Roster Table Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3 id="roster-heading">Assigned Class Roster</h3>
+                        <p id="roster-subheading">Learner records for early monitoring and risk detection.</p>
+                    </div>
+                </div>
 
-            <div class="teacher-card">
-
-                <h3>
-                    Daily Attendance
-                </h3>
-
-                <p>
-                    Record learner attendance
-                    and attendance remarks.
-                </p>
-
+                <div class="table-responsive">
+                    <table class="data-table" id="roster-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Admission No</th>
+                                <th>Learner Name</th>
+                                <th>Grade & Stream</th>
+                                <th>Term 1 Average</th>
+                                <th>Early Risk Status (CatBoost)</th>
+                                <th style="text-align: right;">Intervention Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-tbody">
+                            <tr>
+                                <td colspan="7" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading assigned learners from school database...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
+        </section>
 
-            <div class="teacher-card">
+        <!-- ================================================================= -->
+        <!-- TAB 2: ENTER ASSESSMENT                                           -->
+        <!-- ================================================================= -->
+        <section id="section-assessments" class="content-section">
 
-                <h3>
-                    Behaviour & Observations
-                </h3>
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Record Academic Assessment</h3>
+                        <p>Submit learner scores for Continuous Assessment Tests (CATs), assignments, quizzes, and exams.</p>
+                    </div>
+                </div>
 
-                <p>
-                    Record participation,
-                    behaviour and teacher observations.
-                </p>
+                <form id="assessment-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="assessment-student-id">Learner *</label>
+                            <select id="assessment-student-id" class="form-control" required>
+                                <option value="" disabled selected>Select learner...</option>
+                            </select>
+                        </div>
 
+                        <div class="form-group">
+                            <label for="assessment-subject">Assigned Subject *</label>
+                            <select id="assessment-subject" class="form-control" required>
+                                <option value="" disabled selected>Select subject...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-term">Academic Term *</label>
+                            <select id="assessment-term" class="form-control" required>
+                                <option value="Term 1" selected>Term 1 (Early Warning)</option>
+                                <option value="Term 2">Term 2</option>
+                                <option value="Term 3">Term 3</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-year">Academic Year *</label>
+                            <input id="assessment-year" class="form-control" type="text" value="2026" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-type">Assessment Type *</label>
+                            <select id="assessment-type" class="form-control" required>
+                                <option value="CAT" selected>CAT (Continuous Assessment)</option>
+                                <option value="Quiz">Quiz</option>
+                                <option value="Assignment">Assignment</option>
+                                <option value="Exam">End of Term Exam</option>
+                                <option value="Project">Project</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-score">Score Obtained *</label>
+                            <input id="assessment-score" class="form-control" type="number" step="0.5" min="0" placeholder="e.g. 45" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-max-score">Maximum Possible Score *</label>
+                            <input id="assessment-max-score" class="form-control" type="number" step="0.5" min="1" value="100" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assessment-date">Assessment Date *</label>
+                            <input id="assessment-date" class="form-control" type="date" required>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem; font-size: 0.95rem; font-weight: 600; color: var(--pastel-purple-text);">
+                        Computed Percentage: <span id="assessment-pct-preview">—</span>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="reset" class="btn btn-outline-purple btn-sm">Reset Form</button>
+                        <button type="submit" id="btn-save-assessment" class="btn btn-purple">
+                            💾 Save Assessment Record
+                        </button>
+                    </div>
+                </form>
             </div>
 
-        </div>
+            <!-- Recent Assessments Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Recent Class Assessments</h3>
+                        <p>Assessments recorded for learners in this assigned class.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Learner</th>
+                                <th>Subject</th>
+                                <th>Type</th>
+                                <th>Term</th>
+                                <th>Score</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-assessments-tbody">
+                            <tr>
+                                <td colspan="7" class="state-box">
+                                    <p>Select a learner or record an assessment to view history.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 3: DAILY ATTENDANCE                                           -->
+        <!-- ================================================================= -->
+        <section id="section-attendance" class="content-section">
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Daily Attendance Register</h3>
+                        <p>Record daily learner attendance for your assigned stream. Absences are automatically tracked in the CatBoost intervention model.</p>
+                    </div>
+                </div>
+
+                <div class="attendance-toolbar">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <label for="attendance-date" style="font-weight: 700; font-size: 0.9rem;">Register Date:</label>
+                        <input id="attendance-date" class="form-control" type="date" style="padding: 0.4rem 0.75rem;">
+                    </div>
+                    <button type="button" id="btn-mark-all-present" class="btn btn-blue btn-sm">
+                        ✅ Mark All as Present
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="margin-bottom: 1.5rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Admission No</th>
+                                <th>Learner Name</th>
+                                <th>Attendance Status</th>
+                                <th>Teacher Remarks (Optional)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-tbody">
+                            <tr>
+                                <td colspan="5" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading attendance register...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="btn-submit-attendance" class="btn btn-purple">
+                        📋 Submit Daily Attendance Batch
+                    </button>
+                </div>
+            </div>
+
+        </section>
 
     </main>
 
+    <!-- ===================================================================== -->
+    <!-- LEARNER ANALYTICS MODAL (CATBOOST & EXPERT SYSTEM RECOMMENDATIONS)    -->
+    <!-- ===================================================================== -->
+    <div id="analytics-modal-backdrop" class="modal-backdrop">
+        <div class="modal-dialog">
+
+            <div class="modal-header">
+                <div>
+                    <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--pastel-purple-text); letter-spacing: 0.04em;">
+                        Early-Warning Intervention Report
+                    </div>
+                    <div id="modal-student-name" class="modal-title">Learner Analytics</div>
+                    <div id="modal-student-meta" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+                        Grade 7 East • ADM2026/001
+                    </div>
+                </div>
+                <button type="button" id="btn-close-modal" class="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Loading State in Modal -->
+                <div id="modal-loading" class="state-box" style="display: none;">
+                    <div class="state-spinner"></div>
+                    <p>Executing CatBoost model inference & evaluating expert pedagogical rules...</p>
+                </div>
+
+                <!-- Error State in Modal -->
+                <div id="modal-error" class="toast toast-error" style="display: none; margin-bottom: 1.25rem;">
+                    <span id="modal-error-text">Failed to calculate analytics</span>
+                </div>
+
+                <!-- Analytics Details View -->
+                <div id="modal-content" style="display: none;">
+
+                    <!-- Hero Risk Display -->
+                    <div class="risk-hero-card">
+                        <div class="risk-hero-title">Early Academic Support Probability</div>
+                        <div id="modal-risk-probability" class="risk-hero-prob">0.0%</div>
+
+                        <div style="display: flex; justify-content: center; margin-bottom: 0.5rem;">
+                            <span id="modal-risk-badge" class="status-pill status-monitoring">
+                                Monitoring Suggested
+                            </span>
+                        </div>
+
+                        <!-- Progress Bar Visualizer -->
+                        <div class="risk-meter-bar">
+                            <div id="modal-risk-meter" class="risk-meter-fill fill-monitoring" style="width: 0%;"></div>
+                        </div>
+
+                        <!-- Advisory Notice Disclaimer -->
+                        <div class="advisory-box">
+                            <strong>⚠️ Advisory Notice:</strong> This calibrated support probability is an empirical early-warning indicator derived from Period 1 indicators (first-term performance, cohort percentile rank, and attendance). It is designed to assist educators and parents in structuring early interventions and is <em>not a definitive prediction of academic failure</em>.
+                        </div>
+                    </div>
+
+                    <!-- 3 Indicator Cards Grid -->
+                    <div class="metrics-tri-grid">
+                        <div class="metric-mini-card">
+                            <div class="metric-mini-label">Period 1 Average</div>
+                            <div id="modal-stat-average" class="metric-mini-value">—</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Term 1 Assessment Mean</div>
+                        </div>
+
+                        <div class="metric-mini-card">
+                            <div class="metric-mini-label">Cohort Percentile</div>
+                            <div id="modal-stat-percentile" class="metric-mini-value">—</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Peer Comparison (Midpoint)</div>
+                        </div>
+
+                        <div class="metric-mini-card">
+                            <div class="metric-mini-label">Recorded Absences</div>
+                            <div id="modal-stat-absences" class="metric-mini-value">—</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Term-to-date absence count</div>
+                        </div>
+                    </div>
+
+                    <!-- Expert Recommendations Section -->
+                    <div class="recommendations-title">
+                        <span>💡 Actionable Pedagogical Recommendations</span>
+                    </div>
+                    <div id="modal-recommendations-list" class="recommendations-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="form-actions" style="padding: 1rem 1.75rem; background: #fafafa; border-radius: 0 0 var(--radius-lg) var(--radius-lg);">
+                <button type="button" id="btn-recalculate" class="btn btn-purple btn-sm">
+                    ⚡ Re-calculate Analytics
+                </button>
+                <button type="button" id="btn-close-modal-footer" class="btn btn-outline-purple btn-sm">
+                    Close
+                </button>
+            </div>
+
+        </div>
+    </div>
 
     <script src="js/api.js"></script>
     <script src="js/teacher-dashboard.js"></script>

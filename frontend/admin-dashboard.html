@@ -4,8 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Admin Dashboard | Intelligent Parent Dashboard</title>
+    <title>Administration Console | Intelligent Parent Dashboard</title>
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/admin-dashboard.css">
@@ -13,99 +12,451 @@
 
 <body>
 
-    <header class="navbar">
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
 
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
         <div class="nav-brand">
-            Intelligent School Portal
+            <span class="nav-brand-icon">⚙️</span>
+            <span>Intelligent School Portal</span>
         </div>
 
         <div class="nav-user-info">
-
-            <span id="user-display-name">
-                Loading...
-            </span>
-
-            <span class="role-badge">
-                Admin
-            </span>
-
-            <button
-                id="logout-btn"
-                class="btn btn-outline-danger">
-                Logout
-            </button>
-
+            <span id="user-display-name">Loading administrator profile...</span>
+            <span class="role-badge admin-badge">Admin</span>
+            <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout</button>
         </div>
-
     </header>
 
-
+    <!-- Sub Navigation Tabs -->
     <nav class="sub-nav">
-
-        <a href="#" class="active">
-            Overview
-        </a>
-
-        <a href="#">
-            User Management
-        </a>
-
-        <a href="#">
-            Student Records
-        </a>
-
-        <a href="#">
-            Teacher Assignments
-        </a>
-
+        <button id="tab-overview" class="sub-nav-btn active" data-target="section-overview">
+            <span>📊</span>
+            <span>System Overview</span>
+        </button>
+        <button id="tab-users" class="sub-nav-btn" data-target="section-users">
+            <span>👥</span>
+            <span>User Management</span>
+        </button>
+        <button id="tab-students" class="sub-nav-btn" data-target="section-students">
+            <span>🎓</span>
+            <span>Student Records</span>
+        </button>
+        <button id="tab-assignments" class="sub-nav-btn" data-target="section-assignments">
+            <span>🔗</span>
+            <span>Class & Parent Links</span>
+        </button>
     </nav>
 
-
+    <!-- Main Dashboard Container -->
     <main class="dashboard-container">
 
-        <div class="welcome-card">
+        <!-- ================================================================= -->
+        <!-- TAB 1: SYSTEM OVERVIEW                                            -->
+        <!-- ================================================================= -->
+        <section id="section-overview" class="content-section active">
 
-            <h2>
-                Welcome to the Administration Console
-            </h2>
-
-            <p>
-                Manage users, student records and
-                school-wide system activities.
-            </p>
-
-        </div>
-
-
-        <div class="admin-grid">
-
-            <div class="admin-card">
-                <h3>User Management</h3>
-                <p>
-                    Manage administrators, teachers
-                    and parents.
-                </p>
+            <!-- Welcome Banner -->
+            <div class="welcome-banner">
+                <div>
+                    <h2>System Administration Console</h2>
+                    <p>Manage portal users, learner enrollments, teaching assignments, and parent-child linkages.</p>
+                </div>
+                <button id="btn-refresh-stats" class="btn btn-purple btn-sm">
+                    🔄 Refresh Statistics
+                </button>
             </div>
 
-            <div class="admin-card">
-                <h3>Student Records</h3>
-                <p>
-                    View and manage learner records.
-                </p>
+            <!-- Stats Strip -->
+            <div class="stats-strip">
+                <div class="stat-box stat-purple">
+                    <div class="stat-box-title">System Users</div>
+                    <div id="stat-total-users" class="stat-box-value">—</div>
+                    <div id="stat-users-sub" class="stat-box-subtitle">Admins, Teachers & Parents</div>
+                </div>
+                <div class="stat-box stat-blue">
+                    <div class="stat-box-title">Enrolled Learners</div>
+                    <div id="stat-total-students" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Active student profiles</div>
+                </div>
+                <div class="stat-box stat-pink">
+                    <div class="stat-box-title">Total Assessments</div>
+                    <div id="stat-total-assessments" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Continuous evaluations recorded</div>
+                </div>
+                <div class="stat-box stat-green">
+                    <div class="stat-box-title">Attendance Entries</div>
+                    <div id="stat-total-attendance" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Roll call records tracked</div>
+                </div>
             </div>
 
-            <div class="admin-card">
-                <h3>Teacher Assignments</h3>
-                <p>
-                    Manage teacher class and subject
-                    assignments.
-                </p>
+            <!-- Quick Information Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Portal Management Summary</h3>
+                        <p>Real-time architectural status of the Intelligent Parent Dashboard system.</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                    <div style="background: var(--pastel-purple-bg); border: 1px solid var(--pastel-purple-border); border-radius: var(--radius-md); padding: 1.25rem;">
+                        <h4 style="font-size: 1rem; font-weight: 800; color: var(--pastel-purple-text); margin-bottom: 0.5rem;">
+                            🧠 ML-3 CatBoost Early-Warning Engine
+                        </h4>
+                        <p style="font-size: 0.88rem; color: var(--text-body); line-height: 1.5;">
+                            Trained and calibrated with zero lookahead leakage. Evaluates Period 1 average, midpoint cohort percentile, and annualized absences to generate calibrated support probabilities.
+                        </p>
+                    </div>
+
+                    <div style="background: var(--pastel-blue-bg); border: 1px solid var(--pastel-blue-border); border-radius: var(--radius-md); padding: 1.25rem;">
+                        <h4 style="font-size: 1rem; font-weight: 800; color: var(--pastel-blue-text); margin-bottom: 0.5rem;">
+                            🔒 Role-Based Access Control (RBAC)
+                        </h4>
+                        <p style="font-size: 0.88rem; color: var(--text-body); line-height: 1.5;">
+                            Teachers are scoped strictly to assigned classes. Parents only access their registered children. Admins maintain full school-wide visibility and enrollment authority.
+                        </p>
+                    </div>
+                </div>
             </div>
 
-        </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 2: USER MANAGEMENT                                            -->
+        <!-- ================================================================= -->
+        <section id="section-users" class="content-section">
+
+            <!-- Create User Form Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Create New Portal User</h3>
+                        <p>Provision accounts for administrators, subject teachers, or parents.</p>
+                    </div>
+                </div>
+
+                <form id="create-user-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="user-full-name">Full Name *</label>
+                            <input id="user-full-name" class="form-control" type="text" placeholder="e.g. Jane Doe" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user-email-username">Email or Username *</label>
+                            <input id="user-email-username" class="form-control" type="text" placeholder="e.g. jdoe or jdoe@school.ac.ke" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user-password">Initial Password *</label>
+                            <input id="user-password" class="form-control" type="password" placeholder="••••••••" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user-role">System Role *</label>
+                            <select id="user-role" class="form-control" required>
+                                <option value="TEACHER" selected>Teacher</option>
+                                <option value="PARENT">Parent</option>
+                                <option value="ADMIN">Administrator</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="user-phone">Phone Number (Optional)</label>
+                            <input id="user-phone" class="form-control" type="tel" placeholder="e.g. 0712345678">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="reset" class="btn btn-outline-purple btn-sm">Reset</button>
+                        <button type="submit" id="btn-save-user" class="btn btn-purple">
+                            👤 Create User Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Users List Table Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Registered Portal Users</h3>
+                        <p>All active system user accounts.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Full Name</th>
+                                <th>Username / Email</th>
+                                <th>System Role</th>
+                                <th>Phone Number</th>
+                                <th>Registered Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <tr>
+                                <td colspan="6" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading users...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 3: STUDENT RECORDS                                            -->
+        <!-- ================================================================= -->
+        <section id="section-students" class="content-section">
+
+            <!-- Enroll Student Form Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Enroll New Learner</h3>
+                        <p>Register a student profile into the school database.</p>
+                    </div>
+                </div>
+
+                <form id="enroll-student-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="student-adm-no">Admission Number *</label>
+                            <input id="student-adm-no" class="form-control" type="text" placeholder="e.g. ADM2026/004" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-first-name">First Name *</label>
+                            <input id="student-first-name" class="form-control" type="text" placeholder="e.g. David" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-last-name">Last Name *</label>
+                            <input id="student-last-name" class="form-control" type="text" placeholder="e.g. Mwangi" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-dob">Date of Birth *</label>
+                            <input id="student-dob" class="form-control" type="date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-gender">Gender</label>
+                            <select id="student-gender" class="form-control">
+                                <option value="Male" selected>Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-grade">Grade Level *</label>
+                            <input id="student-grade" class="form-control" type="text" placeholder="e.g. Grade 7" value="Grade 7" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="student-stream">Stream (Class Group)</label>
+                            <input id="student-stream" class="form-control" type="text" placeholder="e.g. East" value="East">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="reset" class="btn btn-outline-purple btn-sm">Reset</button>
+                        <button type="submit" id="btn-save-student" class="btn btn-purple">
+                            🎓 Enroll Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Students List Table Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Enrolled Learners Roster</h3>
+                        <p>All active students across all grades and streams.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Admission No</th>
+                                <th>Learner Name</th>
+                                <th>Grade & Stream</th>
+                                <th>Gender</th>
+                                <th>Date of Birth</th>
+                                <th>Enrolled At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-tbody">
+                            <tr>
+                                <td colspan="7" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading learners...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 4: CLASS & PARENT ASSIGNMENTS                                 -->
+        <!-- ================================================================= -->
+        <section id="section-assignments" class="content-section">
+
+            <!-- Teacher Class Assignments Sub-Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Teacher Class & Subject Assignments</h3>
+                        <p>Assign subject teachers to specific grade levels and streams.</p>
+                    </div>
+                </div>
+
+                <!-- Assign Teacher Form -->
+                <form id="assign-teacher-form" class="inline-form-card">
+                    <h4>+ Assign Teacher to Class</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="assign-teacher-select">Select Teacher *</label>
+                            <select id="assign-teacher-select" class="form-control" required>
+                                <option value="" disabled selected>Loading teachers...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assign-grade">Grade Level *</label>
+                            <input id="assign-grade" class="form-control" type="text" placeholder="e.g. Grade 7" value="Grade 7" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assign-stream">Stream *</label>
+                            <input id="assign-stream" class="form-control" type="text" placeholder="e.g. East" value="East" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="assign-subject">Subject Name *</label>
+                            <input id="assign-subject" class="form-control" type="text" placeholder="e.g. Mathematics" value="Mathematics" required>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                        <button type="submit" id="btn-save-assignment" class="btn btn-purple btn-sm">
+                            Save Teacher Assignment
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Assignments Table -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Teacher Name</th>
+                                <th>Grade Level</th>
+                                <th>Stream</th>
+                                <th>Subject</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assignments-tbody">
+                            <tr>
+                                <td colspan="5" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading teacher assignments...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Parent-Student Links Sub-Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Parent-Learner Linkages</h3>
+                        <p>Link parent accounts to student profiles for parental portal access.</p>
+                    </div>
+                </div>
+
+                <!-- Link Parent Form -->
+                <form id="link-parent-form" class="inline-form-card" style="background: var(--pastel-pink-bg); border-color: var(--pastel-pink-border);">
+                    <h4 style="color: var(--pastel-pink-text);">+ Link Parent to Learner</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="link-parent-select">Select Parent *</label>
+                            <select id="link-parent-select" class="form-control" required>
+                                <option value="" disabled selected>Loading parents...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="link-student-select">Select Learner *</label>
+                            <select id="link-student-select" class="form-control" required>
+                                <option value="" disabled selected>Loading learners...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="link-relationship">Relationship Type</label>
+                            <select id="link-relationship" class="form-control">
+                                <option value="Mother" selected>Mother</option>
+                                <option value="Father">Father</option>
+                                <option value="Guardian">Guardian</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                        <button type="submit" id="btn-save-link" class="btn btn-pink btn-sm">
+                            Save Parent-Learner Link
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Parent Links Table -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Parent Name</th>
+                                <th>Learner Name</th>
+                                <th>Admission No</th>
+                                <th>Relationship</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parent-links-tbody">
+                            <tr>
+                                <td colspan="5" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading parent links...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
 
     </main>
-
 
     <script src="js/api.js"></script>
     <script src="js/admin-dashboard.js"></script>
