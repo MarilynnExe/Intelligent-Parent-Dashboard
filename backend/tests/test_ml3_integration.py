@@ -264,6 +264,27 @@ def test_percentile_service_overall_cohort(db_session):
     )
     assert abs(alice_pct - 83.3) < 0.1
 
+    # Charlie scores 100% in a new assessment: average 70% now ranks above Bob,
+    # so the stored percentile must be refreshed rather than reused.
+    db_session.add(Assessment(
+        student_id=students[2].student_id,
+        subject_name="Mathematics",
+        academic_year="2026",
+        term="Term 1",
+        assessment_type="Exam",
+        score=100.0,
+        max_score=100.0,
+        percentage=100.0,
+        assessment_date=date(2026, 3, 1),
+        recorded_by_teacher_id=teacher.user_id,
+    ))
+    db_session.commit()
+
+    charlie_pct = PercentileService.get_or_calculate_student_percentile(
+        db_session, students[2], "Term 1", "2026"
+    )
+    assert abs(charlie_pct - 50.0) < 0.1
+
 
 # ---------------------------------------------------------------------------
 # 4. Expert System Rules Tests

@@ -166,23 +166,11 @@ class PercentileService:
         academic_year: str,
     ) -> float:
         """
-        Retrieve overall cohort percentile for student in the given term/year.
-        If not yet computed, calculates it on-the-fly from available cohort assessments.
-        """
-        existing = (
-            db.query(CohortPercentile)
-            .filter(
-                CohortPercentile.student_id == student.student_id,
-                CohortPercentile.subject_name.is_(None),
-                CohortPercentile.term == term,
-                CohortPercentile.academic_year == academic_year,
-            )
-            .first()
-        )
-        if existing:
-            return float(existing.percentile_rank)
+        Return the student's overall cohort percentile for the given term/year.
 
-        # Calculate for cohort
+        The whole cohort is recalculated on every call: a new assessment for any
+        classmate changes everyone's rank, so a previously stored value can be stale.
+        """
         PercentileService.calculate_overall_cohort_percentiles(
             db=db,
             grade_level=student.grade_level,
