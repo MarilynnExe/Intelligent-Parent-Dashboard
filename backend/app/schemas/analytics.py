@@ -36,5 +36,6 @@ class StudentAnalyticsOut(BaseModel):
 
 
 class CalculateAnalyticsRequest(BaseModel):
-    term: str = "Term 1"
-    academic_year: str = "2026"
+    # None means the current term, worked out from today's date
+    term: Optional[str] = None
+    academic_year: Optional[str] = None

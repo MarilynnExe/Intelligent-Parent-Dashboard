@@ -10,14 +10,14 @@ Exposes endpoints for:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.academic_calendar import term_date_range
+from app.core.academic_calendar import term_date_range, term_for_date
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.models.academic import Assessment, CohortPercentile
@@ -139,8 +139,10 @@ def calculate_student_analytics(
         4. Predict calibrated risk probability via CatBoost + Platt calibrator.
         5. Trigger Expert System rules to generate actionable recommendations.
     """
-    term = request.term if request else "Term 1"
-    academic_year = request.academic_year if request else "2026"
+    # Unspecified term/year means the term today's date falls in.
+    current_term, current_year = term_for_date(date.today())
+    term = (request.term if request else None) or current_term
+    academic_year = (request.academic_year if request else None) or current_year
 
     student = db.query(Student).filter(Student.student_id == student_id).first()
     if not student:
@@ -279,8 +281,8 @@ def calculate_student_analytics(
 )
 def get_student_analytics(
     student_id: int,
-    term: str = Query("Term 1", description="Academic term"),
-    academic_year: str = Query("2026", description="Academic year"),
+    term: Optional[str] = Query(None, description="Academic term; omit for the latest calculated"),
+    academic_year: Optional[str] = Query(None, description="Academic year; omit for the latest calculated"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -297,21 +299,22 @@ def get_student_analytics(
 
     verify_student_access(current_user, student, db, allow_parent=True)
 
-    analytics = (
-        db.query(StudentAnalytics)
-        .filter(
-            StudentAnalytics.student_id == student_id,
-            StudentAnalytics.term == term,
-            StudentAnalytics.academic_year == academic_year,
-        )
-        .first()
-    )
+    query = db.query(StudentAnalytics).filter(StudentAnalytics.student_id == student_id)
+    if term:
+        query = query.filter(StudentAnalytics.term == term)
+    if academic_year:
+        query = query.filter(StudentAnalytics.academic_year == academic_year)
+    analytics = query.order_by(StudentAnalytics.calculated_at.desc()).first()
 
     if not analytics:
+        period = " ".join(p for p in (term, academic_year) if p) or "any term"
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Analytics not yet calculated for student {student_id} in {term} {academic_year}.",
+            detail=f"Analytics not yet calculated for student {student_id} in {period}.",
         )
+
+    # Everything below describes the period the analytics were calculated for.
+    term, academic_year = analytics.term, analytics.academic_year
 
     recs = (
         db.query(Recommendation)
