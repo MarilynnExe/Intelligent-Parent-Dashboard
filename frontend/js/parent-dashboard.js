@@ -239,6 +239,10 @@ document.addEventListener("DOMContentLoaded", () => {
             headerBadge.textContent = "● In Progress";
         }
 
+        // Analytics are for the latest term the teacher calculated
+        document.getElementById("hero-period").textContent = `— ${data.term} ${data.academic_year}`;
+        document.getElementById("stat-average-label").textContent = `${data.term} Academic Average`;
+
         // Indicators
         document.getElementById("stat-academic-average").textContent =
             data.overall_average !== null ? `${data.overall_average.toFixed(1)}%` : "—";
@@ -289,6 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderEmptyAnalytics() {
         document.getElementById("hero-risk-probability").textContent = "Pending";
+        document.getElementById("hero-period").textContent = "";
         document.getElementById("hero-risk-badge").className = "status-pill status-none";
         document.getElementById("hero-risk-badge").textContent = "In Progress";
         document.getElementById("badge-overall-status").className = "status-pill status-none";

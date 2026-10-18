@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         analyticsCache: {},     // student_id -> analytics data
         attendanceRecords: {},  // student_id -> { status: "Present"|"Absent"|"Late", remarks: "" }
         activeStudentForModal: null,
+        period: currentAcademicPeriod(), // { term, academic_year } used for analytics
     };
 
     // -------------------------------------------------------------------------
@@ -93,6 +94,38 @@ document.addEventListener("DOMContentLoaded", () => {
     const attendanceDateInput = document.getElementById("attendance-date");
     if (assessmentDateInput) assessmentDateInput.value = todayISO;
     if (attendanceDateInput) attendanceDateInput.value = todayISO;
+
+    // -------------------------------------------------------------------------
+    // Analysis Period (term + year) shared by roster, analytics and forms
+    // -------------------------------------------------------------------------
+    const periodTermSelect = document.getElementById("period-term");
+    const periodYearInput = document.getElementById("period-year");
+
+    function applyPeriodToForms() {
+        const { term, academic_year } = state.period;
+        document.getElementById("assessment-term").value = term;
+        document.getElementById("assessment-year").value = academic_year;
+        document.getElementById("roster-average-heading").textContent = `${term} Average`;
+        document.getElementById("modal-stat-average-sub").textContent = `${term} ${academic_year} assessment mean`;
+    }
+
+    function onPeriodChange() {
+        const year = periodYearInput.value.trim();
+        if (!/^\d{4}$/.test(year)) {
+            showToast("Enter a four-digit academic year.", "error");
+            return;
+        }
+        state.period = { term: periodTermSelect.value, academic_year: year };
+        state.analyticsCache = {};
+        applyPeriodToForms();
+        if (state.activeAssignment) loadClassStudents();
+    }
+
+    periodTermSelect.value = state.period.term;
+    periodYearInput.value = state.period.academic_year;
+    periodTermSelect.addEventListener("change", onPeriodChange);
+    periodYearInput.addEventListener("change", onPeriodChange);
+    applyPeriodToForms();
 
     // -------------------------------------------------------------------------
     // 4. Initial Data Loading: Assignments
@@ -196,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Update Subheading
         document.getElementById("roster-heading").textContent = `${grade_level} — Stream ${stream}`;
         document.getElementById("roster-subheading").textContent =
-            `Subject: ${state.activeAssignment.subject_name} • Academic Year: 2026`;
+            `Subject: ${state.activeAssignment.subject_name} • ${state.period.term} ${state.period.academic_year}`;
 
         try {
             const url = `/teacher/students?grade_level=${encodeURIComponent(grade_level)}&stream=${encodeURIComponent(stream)}`;
@@ -324,7 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (const s of students) {
             try {
-                const res = await apiFetch(`/analytics/student/${s.student_id}`);
+                const res = await apiFetch(`/analytics/student/${s.student_id}?${periodQuery()}`);
                 if (res.ok) {
                     const data = await res.json();
                     state.analyticsCache[s.student_id] = data;
@@ -351,6 +384,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         updateStatsStrip(students, { onTrack, monitoring, targeted });
+    }
+
+    function periodQuery() {
+        return new URLSearchParams(state.period).toString();
     }
 
     function renderStatusPill(status, prob) {
@@ -414,6 +451,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Form Submission
     const assessmentForm = document.getElementById("assessment-form");
     const saveAssessmentBtn = document.getElementById("btn-save-assessment");
+
+    // Reset restores HTML defaults; put the selected period back afterwards
+    assessmentForm.addEventListener("reset", () => setTimeout(applyPeriodToForms, 0));
 
     assessmentForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -488,7 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Re-fetch analytics for this student to update roster average
             try {
-                const aRes = await apiFetch(`/analytics/student/${studentId}`);
+                const aRes = await apiFetch(`/analytics/student/${studentId}?${periodQuery()}`);
                 if (aRes.ok) {
                     const aData = await aRes.json();
                     state.analyticsCache[studentId] = aData;
@@ -797,10 +837,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const res = await apiFetch(`/analytics/calculate/${studentId}`, {
                 method: "POST",
-                body: JSON.stringify({
-                    term: "Term 1",
-                    academic_year: "2026"
-                })
+                body: JSON.stringify(state.period)
             });
 
             const data = await res.json();

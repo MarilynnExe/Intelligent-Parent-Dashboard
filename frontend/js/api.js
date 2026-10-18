@@ -139,3 +139,32 @@ async function apiFetch(
 
     return response;
 }
+
+// Term today's date falls in.
+// Keep in sync with TERM_WINDOWS in backend/app/core/academic_calendar.py
+function currentAcademicPeriod(today = new Date()) {
+
+    const month = today.getMonth() + 1;
+
+    const term =
+        month <= 4 ? "Term 1"
+        : month <= 8 ? "Term 2"
+        : "Term 3";
+
+    return {
+        term,
+        academic_year: String(today.getFullYear())
+    };
+}
+
+
+// Escape user-entered text before inserting it into innerHTML
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}

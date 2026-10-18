@@ -56,6 +56,15 @@
                     <option value="" disabled selected>Loading teaching assignments...</option>
                 </select>
             </div>
+            <div class="class-selector-group">
+                <span class="class-selector-label">Analysis Period:</span>
+                <select id="period-term" class="class-select" aria-label="Select term">
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                </select>
+                <input id="period-year" class="class-select" type="number" min="2000" max="2100" style="width: 6.5rem;" aria-label="Academic year">
+            </div>
             <button id="btn-refresh-roster" class="btn btn-outline-purple btn-sm">
                 🔄 Refresh Class
             </button>
@@ -115,7 +124,7 @@
                                 <th>Admission No</th>
                                 <th>Learner Name</th>
                                 <th>Grade & Stream</th>
-                                <th>Term 1 Average</th>
+                                <th id="roster-average-heading">Term Average</th>
                                 <th>Early Risk Status (CatBoost)</th>
                                 <th style="text-align: right;">Intervention Actions</th>
                             </tr>
@@ -166,7 +175,7 @@
                         <div class="form-group">
                             <label for="assessment-term">Academic Term *</label>
                             <select id="assessment-term" class="form-control" required>
-                                <option value="Term 1" selected>Term 1 (Early Warning)</option>
+                                <option value="Term 1">Term 1</option>
                                 <option value="Term 2">Term 2</option>
                                 <option value="Term 3">Term 3</option>
                             </select>
@@ -174,7 +183,7 @@
 
                         <div class="form-group">
                             <label for="assessment-year">Academic Year *</label>
-                            <input id="assessment-year" class="form-control" type="text" value="2026" required>
+                            <input id="assessment-year" class="form-control" type="text" required>
                         </div>
 
                         <div class="form-group">
@@ -361,16 +370,16 @@
 
                         <!-- Advisory Notice Disclaimer -->
                         <div class="advisory-box">
-                            <strong>⚠️ Advisory Notice:</strong> This calibrated support probability is an empirical early-warning indicator derived from Period 1 indicators (first-term performance, cohort percentile rank, and attendance). It is designed to assist educators and parents in structuring early interventions and is <em>not a definitive prediction of academic failure</em>.
+                            <strong>⚠️ Advisory Notice:</strong> This calibrated support probability is an empirical early-warning indicator derived from the selected term's indicators (term performance, cohort percentile rank, and attendance). It is designed to assist educators and parents in structuring early interventions and is <em>not a definitive prediction of academic failure</em>.
                         </div>
                     </div>
 
                     <!-- 3 Indicator Cards Grid -->
                     <div class="metrics-tri-grid">
                         <div class="metric-mini-card">
-                            <div class="metric-mini-label">Period 1 Average</div>
+                            <div class="metric-mini-label">Term Average</div>
                             <div id="modal-stat-average" class="metric-mini-value">—</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Term 1 Assessment Mean</div>
+                            <div id="modal-stat-average-sub" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Assessment mean for the term</div>
                         </div>
 
                         <div class="metric-mini-card">
