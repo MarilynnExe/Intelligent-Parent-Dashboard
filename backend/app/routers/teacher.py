@@ -34,7 +34,9 @@ from app.models.behaviour import (
 
 from app.schemas.behaviour import (
     BehaviourCreate,
-    TeacherObservationCreate
+    BehaviourOut,
+    TeacherObservationCreate,
+    TeacherObservationOut
 )
 
 router = APIRouter(
@@ -514,3 +516,101 @@ def add_teacher_observation(
     return {
         "message": "Teacher observation recorded successfully."
     }
+
+
+def get_taught_student(
+    db: Session,
+    teacher: User,
+    student_id: int
+) -> Student:
+    """Return the student, or raise 404/403 if missing or outside the teacher's classes."""
+    student = (
+        db.query(Student)
+        .filter(Student.student_id == student_id)
+        .first()
+    )
+
+    if not student:
+        raise HTTPException(
+            status_code=404,
+            detail="Student not found."
+        )
+
+    authorized = (
+        db.query(TeacherAssignment)
+        .filter(
+            TeacherAssignment.teacher_user_id
+            == teacher.user_id,
+
+            TeacherAssignment.grade_level
+            == student.grade_level,
+
+            TeacherAssignment.stream
+            == student.stream
+        )
+        .first()
+    )
+
+    if not authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized student access."
+        )
+
+    return student
+
+
+@router.get(
+    "/students/{student_id}/behaviour",
+    response_model=List[BehaviourOut]
+)
+def get_student_behaviour(
+    student_id: int,
+
+    current_user: User = Depends(
+        require_role(["TEACHER"])
+    ),
+
+    db: Session = Depends(get_db)
+):
+    get_taught_student(db, current_user, student_id)
+
+    return (
+        db.query(BehaviourRecord)
+        .filter(
+            BehaviourRecord.student_id == student_id
+        )
+        .order_by(
+            BehaviourRecord.record_date.desc(),
+            BehaviourRecord.record_id.desc()
+        )
+        .all()
+    )
+
+
+@router.get(
+    "/students/{student_id}/observations",
+    response_model=List[TeacherObservationOut]
+)
+def get_student_observations(
+    student_id: int,
+
+    current_user: User = Depends(
+        require_role(["TEACHER"])
+    ),
+
+    db: Session = Depends(get_db)
+):
+    get_taught_student(db, current_user, student_id)
+
+    return (
+        db.query(TeacherObservation)
+        .filter(
+            TeacherObservation.student_id == student_id
+        )
+        .order_by(
+            TeacherObservation.observation_date.desc(),
+            TeacherObservation.observation_id.desc()
+        )
+        .all()
+    )
