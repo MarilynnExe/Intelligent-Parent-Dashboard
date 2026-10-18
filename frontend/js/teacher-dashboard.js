@@ -94,6 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const attendanceDateInput = document.getElementById("attendance-date");
     if (assessmentDateInput) assessmentDateInput.value = todayISO;
     if (attendanceDateInput) attendanceDateInput.value = todayISO;
+    document.getElementById("behaviour-date").value = todayISO;
 
     // -------------------------------------------------------------------------
     // Analysis Period (term + year) shared by roster, analytics and forms
@@ -107,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("assessment-year").value = academic_year;
         document.getElementById("roster-average-heading").textContent = `${term} Average`;
         document.getElementById("modal-stat-average-sub").textContent = `${term} ${academic_year} assessment mean`;
+        document.getElementById("observation-period").textContent = `(${term} ${academic_year})`;
     }
 
     function onPeriodChange() {
@@ -416,16 +418,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // 6. Assessment Form Implementation
     // -------------------------------------------------------------------------
     function populateAssessmentStudentDropdown(students) {
-        const select = document.getElementById("assessment-student-id");
-        if (!select) return;
+        // Learner pickers on the assessment and behaviour tabs share the class roster
+        ["assessment-student-id", "notes-student-id"].forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
 
-        select.innerHTML = `<option value="" disabled selected>Select learner...</option>`;
-        students.forEach(s => {
-            const opt = document.createElement("option");
-            opt.value = s.student_id;
-            opt.textContent = `${s.first_name} ${s.last_name} (${s.admission_number})`;
-            select.appendChild(opt);
+            select.innerHTML = `<option value="" disabled selected>Select learner...</option>`;
+            students.forEach(s => {
+                const opt = document.createElement("option");
+                opt.value = s.student_id;
+                opt.textContent = `${s.first_name} ${s.last_name} (${s.admission_number})`;
+                select.appendChild(opt);
+            });
         });
+        resetLearnerHistory();
     }
 
     // Live Percentage Preview
@@ -790,6 +796,157 @@ document.addEventListener("DOMContentLoaded", () => {
             submitAttendanceBtn.disabled = false;
             submitAttendanceBtn.textContent = "📋 Submit Daily Attendance Batch";
         }
+    });
+
+    // -------------------------------------------------------------------------
+    // 8b. Behaviour Ratings & Classroom Observations
+    // -------------------------------------------------------------------------
+    const notesStudentSelect = document.getElementById("notes-student-id");
+
+    function selectedNotesStudentId() {
+        return parseInt(notesStudentSelect.value) || null;
+    }
+
+    function resetLearnerHistory() {
+        document.getElementById("notes-history-heading").textContent = "Learner History";
+        document.getElementById("behaviour-tbody").innerHTML =
+            `<tr><td colspan="4" class="state-box"><p>Select a learner to view behaviour ratings.</p></td></tr>`;
+        document.getElementById("observations-tbody").innerHTML =
+            `<tr><td colspan="3" class="state-box"><p>Select a learner to view observations.</p></td></tr>`;
+    }
+
+    function ratingPill(rating) {
+        const cls = rating <= 2 ? "status-targeted" : (rating === 3 ? "status-monitoring" : "status-on-track");
+        return `<span class="status-pill ${cls}">${rating} / 5</span>`;
+    }
+
+    async function loadLearnerHistory(studentId) {
+        const behaviourBody = document.getElementById("behaviour-tbody");
+        const observationsBody = document.getElementById("observations-tbody");
+        const student = state.students.find(s => s.student_id === studentId);
+        if (student) {
+            document.getElementById("notes-history-heading").textContent =
+                `History — ${student.first_name} ${student.last_name}`;
+        }
+
+        behaviourBody.innerHTML = `<tr><td colspan="4" class="state-box"><div class="state-spinner"></div></td></tr>`;
+        observationsBody.innerHTML = `<tr><td colspan="3" class="state-box"><div class="state-spinner"></div></td></tr>`;
+
+        try {
+            const [bRes, oRes] = await Promise.all([
+                apiFetch(`/teacher/students/${studentId}/behaviour`),
+                apiFetch(`/teacher/students/${studentId}/observations`)
+            ]);
+            if (!bRes.ok || !oRes.ok) {
+                const errData = await (bRes.ok ? oRes : bRes).json().catch(() => ({}));
+                throw new Error(errData.detail || "Failed to load learner history.");
+            }
+            const behaviour = await bRes.json();
+            const observations = await oRes.json();
+
+            behaviourBody.innerHTML = behaviour.length === 0
+                ? `<tr><td colspan="4" class="state-box"><p>No behaviour ratings recorded yet.</p></td></tr>`
+                : behaviour.map(r => `
+                    <tr>
+                        <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(r.record_date)}</td>
+                        <td>${escapeHtml(r.category)}</td>
+                        <td>${ratingPill(r.rating)}</td>
+                        <td>${escapeHtml(r.teacher_note || "—")}</td>
+                    </tr>`).join("");
+
+            observationsBody.innerHTML = observations.length === 0
+                ? `<tr><td colspan="3" class="state-box"><p>No observations recorded yet.</p></td></tr>`
+                : observations.map(o => `
+                    <tr>
+                        <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(o.observation_date)}</td>
+                        <td><span style="font-size: 0.85rem;">${escapeHtml(o.term)} ${escapeHtml(o.academic_year)}</span></td>
+                        <td>${escapeHtml(o.observation_text)}</td>
+                    </tr>`).join("");
+
+        } catch (err) {
+            console.error("Learner History Error:", err);
+            const msg = `<p style="color: var(--pastel-pink-text);">${escapeHtml(err.message)}</p>`;
+            behaviourBody.innerHTML = `<tr><td colspan="4" class="state-box">${msg}</td></tr>`;
+            observationsBody.innerHTML = `<tr><td colspan="3" class="state-box">${msg}</td></tr>`;
+        }
+    }
+
+    notesStudentSelect.addEventListener("change", () => {
+        const studentId = selectedNotesStudentId();
+        if (studentId) loadLearnerHistory(studentId);
+    });
+
+    async function submitNote(button, endpoint, payload, successMessage, onSuccess) {
+        const label = button.textContent;
+        button.disabled = true;
+        button.textContent = "Saving...";
+        try {
+            const res = await apiFetch(endpoint, { method: "POST", body: JSON.stringify(payload) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const detail = Array.isArray(data.detail) ? data.detail[0].msg : data.detail;
+                throw new Error(detail || "Failed to save record.");
+            }
+            showToast(successMessage, "success");
+            onSuccess();
+            loadLearnerHistory(payload.student_id);
+        } catch (err) {
+            console.error("Save Note Error:", err);
+            showToast(`Error: ${err.message}`, "error");
+        } finally {
+            button.disabled = false;
+            button.textContent = label;
+        }
+    }
+
+    document.getElementById("behaviour-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const studentId = selectedNotesStudentId();
+        if (!studentId) {
+            showToast("Please select a learner.", "error");
+            return;
+        }
+        const noteInput = document.getElementById("behaviour-note");
+        submitNote(
+            document.getElementById("btn-save-behaviour"),
+            "/teacher/behaviour",
+            {
+                student_id: studentId,
+                category: document.getElementById("behaviour-category").value,
+                rating: parseInt(document.getElementById("behaviour-rating").value),
+                record_date: document.getElementById("behaviour-date").value || null,
+                teacher_note: noteInput.value.trim() || null
+            },
+            "Behaviour rating saved.",
+            () => { noteInput.value = ""; }
+        );
+    });
+
+    document.getElementById("observation-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const studentId = selectedNotesStudentId();
+        if (!studentId) {
+            showToast("Please select a learner.", "error");
+            return;
+        }
+        const textInput = document.getElementById("observation-text");
+        const text = textInput.value.trim();
+        if (!text) {
+            showToast("Observation text cannot be empty.", "error");
+            return;
+        }
+        submitNote(
+            document.getElementById("btn-save-observation"),
+            "/teacher/observations",
+            {
+                student_id: studentId,
+                term: state.period.term,
+                academic_year: state.period.academic_year,
+                observation_text: text
+            },
+            "Observation saved.",
+            () => { textInput.value = ""; }
+        );
     });
 
     // -------------------------------------------------------------------------

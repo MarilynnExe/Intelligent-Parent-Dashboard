@@ -856,3 +856,18 @@ body {
         grid-template-columns: 1fr;
     }
 }
+/* Behaviour & observation forms (matches admin inline forms) */
+.inline-form-card {
+    background: var(--pastel-purple-bg);
+    border: 1.5px solid var(--pastel-purple-border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.inline-form-card h4 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--pastel-purple-text);
+    margin-bottom: 1rem;
+}

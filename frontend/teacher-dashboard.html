@@ -43,6 +43,10 @@
             <span>📅</span>
             <span>Daily Attendance</span>
         </button>
+        <button id="tab-behaviour" class="sub-nav-btn" data-target="section-behaviour">
+            <span>🗒️</span>
+            <span>Behaviour & Notes</span>
+        </button>
     </nav>
 
     <!-- Main Dashboard Container -->
@@ -310,6 +314,118 @@
                     <button type="button" id="btn-submit-attendance" class="btn btn-purple">
                         📋 Submit Daily Attendance Batch
                     </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- TAB 4: BEHAVIOUR & OBSERVATIONS                                   -->
+        <!-- ================================================================= -->
+        <section id="section-behaviour" class="content-section">
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Behaviour & Classroom Observations</h3>
+                        <p>Ratings of 2 or below trigger a behaviour recommendation the next time risk analytics run.</p>
+                    </div>
+                </div>
+
+                <div class="form-group" style="max-width: 420px; margin-bottom: 1.5rem;">
+                    <label for="notes-student-id">Learner *</label>
+                    <select id="notes-student-id" class="form-control" required>
+                        <option value="" disabled selected>Select learner...</option>
+                    </select>
+                </div>
+
+                <form id="behaviour-form" class="inline-form-card">
+                    <h4>Behaviour Rating</h4>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="behaviour-category">Category *</label>
+                            <select id="behaviour-category" class="form-control" required>
+                                <option value="Participation">Participation</option>
+                                <option value="Conduct">Conduct</option>
+                                <option value="Homework Completion">Homework Completion</option>
+                                <option value="Focus & Attention">Focus & Attention</option>
+                                <option value="Peer Interaction">Peer Interaction</option>
+                                <option value="Punctuality">Punctuality</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="behaviour-rating">Rating *</label>
+                            <select id="behaviour-rating" class="form-control" required>
+                                <option value="5">5 — Excellent</option>
+                                <option value="4">4 — Good</option>
+                                <option value="3" selected>3 — Satisfactory</option>
+                                <option value="2">2 — Needs Improvement</option>
+                                <option value="1">1 — Concerning</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="behaviour-date">Date *</label>
+                            <input id="behaviour-date" class="form-control" type="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="behaviour-note">Teacher Note (Optional)</label>
+                            <input id="behaviour-note" class="form-control" type="text" maxlength="500" placeholder="e.g. Rarely contributes in group work">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" id="btn-save-behaviour" class="btn btn-purple btn-sm">💾 Save Behaviour Rating</button>
+                    </div>
+                </form>
+
+                <form id="observation-form" class="inline-form-card">
+                    <h4>Classroom Observation <span id="observation-period" style="font-weight: 600; color: var(--text-muted);"></span></h4>
+                    <div class="form-group">
+                        <label for="observation-text">Observation *</label>
+                        <textarea id="observation-text" class="form-control" rows="3" maxlength="1000" style="resize: vertical;" placeholder="e.g. Understands fractions conceptually but makes frequent calculation errors." required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" id="btn-save-observation" class="btn btn-purple btn-sm">💾 Save Observation</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3 id="notes-history-heading">Learner History</h3>
+                        <p>Behaviour ratings and observations recorded for the selected learner.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="margin-bottom: 1.5rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Rating</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="behaviour-tbody">
+                            <tr><td colspan="4" class="state-box"><p>Select a learner to view behaviour ratings.</p></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Term</th>
+                                <th>Observation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="observations-tbody">
+                            <tr><td colspan="3" class="state-box"><p>Select a learner to view observations.</p></td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
