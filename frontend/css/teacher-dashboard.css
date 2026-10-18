@@ -871,3 +871,7 @@ body {
     color: var(--pastel-purple-text);
     margin-bottom: 1rem;
 }
+
+textarea.form-control {
+    font-family: inherit;
+}
