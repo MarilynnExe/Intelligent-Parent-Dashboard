@@ -16,3 +16,4 @@ from app.models.assignment import ClassAssignment, AssignmentCompletion
 
 from app.models.competency import Competency, CompetencyObservation
 
+from app.models.messaging import Conversation, PrivateMessage

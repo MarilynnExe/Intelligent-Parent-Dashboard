@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/record-editor.css">
     <link rel="stylesheet" href="css/class-assignments.css">
+    <link rel="stylesheet" href="css/messaging.css">
 </head>
 
 <body>
@@ -56,6 +57,7 @@
         </button>
         <button id="tab-competencies" class="sub-nav-btn" data-target="section-competencies"><span>📘</span><span>Competency tracking</span></button>
         <button id="tab-class-assignments" class="sub-nav-btn" data-target="section-class-assignments"><span>📝</span><span>Assignments & Completion</span></button>
+        <button id="tab-messages" class="sub-nav-btn" data-target="section-messages"><span>💬</span><span>Messages <span id="messages-unread" aria-label="Unread messages">0</span></span></button>
     </nav>
 
     <!-- Main Dashboard Container -->
@@ -489,6 +491,20 @@
             <div id="competency-register" class="section-card" hidden></div>
         </section>
 
+        <section id="section-messages" class="content-section">
+            <div class="section-card"><div class="message-toolbar"><h3>Private messages</h3><button id="messages-refresh" class="btn" type="button">Refresh messages</button></div>
+                <p>Private conversations with one parent or teacher about a learner. Conversations span terms. Previous conversations remain readable after school links end; replies require current links.</p>
+                <form id="message-start" class="message-start"><label>Learner<select id="message-learner" required><option value="">Loading learners…</option></select></label><label>Contact<select id="message-contact" required><option value="">Select a learner first</option></select></label><button id="message-start-button" class="btn" disabled>Open conversation</button></form>
+                <p id="messages-status" role="status" aria-live="polite"></p>
+            </div>
+            <div class="messaging-layout"><aside class="section-card" aria-label="Conversations"><h3>Conversations</h3><div id="message-conversations">Loading conversations…</div><button id="messages-more-conversations" class="btn" type="button" hidden>Load more conversations</button></aside>
+                <div id="message-thread" class="section-card"><h3 id="message-thread-title">Select a conversation</h3><p id="message-reply-state"></p>
+                    <button id="messages-older" type="button" class="btn" hidden>Load older messages</button>
+                    <ol id="message-history" aria-label="Message history"></ol>
+                    <form id="message-compose"><label for="message-body">Message</label><textarea id="message-body" rows="4" maxlength="4000" required disabled></textarea><button id="message-send" class="btn btn-primary" disabled>Send message</button></form>
+                </div>
+            </div>
+        </section>
 
     </main>
 
@@ -601,6 +617,7 @@
     <script src="JS/teacher-dashboard.js"></script>
     <script src="JS/class-assignments.js"></script>
     <script src="JS/competencies.js"></script>
+    <script src="JS/messaging.js"></script>
 
     <!-- Notifications Drawer Backdrop -->
     <div id="notif-backdrop" class="notif-backdrop"></div>
