@@ -73,3 +73,9 @@ def health_check():
     return {
         "status": "healthy"
     }
+
+# Serve the existing buildless frontend with correct case-sensitive asset paths.
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/portal", StaticFiles(directory=Path(__file__).resolve().parents[2] / "frontend", html=True), name="portal")

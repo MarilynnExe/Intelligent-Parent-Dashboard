@@ -1,3 +1,18 @@
 .env
+.venv/
+.venv-linux/
 __pycache__/
-*.pyc.venv/
+*.pyc
+.pytest_cache/
+*.db
+
+# Project-local secrets and generated files
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+.coverage
+htmlcov/
+.DS_Store
+**/.~*
+**/~$*
