@@ -14,4 +14,5 @@ from app.models.lifecycle import UserLifecycle, StudentLifecycle, RecordChange
 
 from app.models.assignment import ClassAssignment, AssignmentCompletion
 
+from app.models.competency import Competency, CompetencyObservation
 

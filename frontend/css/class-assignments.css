@@ -16,3 +16,8 @@
 #completion-register-body textarea { min-width:170px; min-height:65px; }
 #assignment-register-panel[hidden] { display:none; }
 #assignment-register-panel { scroll-margin-top:1rem; }
+/* Competency registers remain usable on narrow touch screens. */
+#section-competencies .work-card button { padding:.55rem .7rem; min-height:40px; font:inherit; font-size:.85rem; cursor:pointer; border:1px solid #cbd5e1; border-radius:6px; background:white; margin:.2rem 0; }
+#competency-register ol { padding-left:1.3rem; }
+#competency-status { padding:.8rem 0; line-height:1.6; }
+#parent-competencies summary { cursor:pointer; padding:.6rem 0; }

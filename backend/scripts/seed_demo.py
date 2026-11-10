@@ -81,11 +81,16 @@ if __name__ == "__main__":
     parser.add_argument("--term", choices=["Term 1", "Term 2", "Term 3"], default=current_term)
     parser.add_argument("--year", default=current_year)
     parser.add_argument("--with-assignments", action="store_true", help="Also add fictional assignment-completion examples without resetting existing work.")
+    parser.add_argument("--with-competencies", action="store_true", help="Also add fictional teacher-defined skills and dated evidence; preserve existing corrections.")
     args = parser.parse_args()
     print(seed_demo(args.term, args.year))
     if args.with_assignments:
         from scripts.seed_assignments import seed_assignments
         with SessionLocal() as db:
             print("Demo assignment IDs:", seed_assignments(db, args.term, args.year))
+    if args.with_competencies:
+        from scripts.seed_competencies import seed_competencies
+        with SessionLocal() as db:
+            print("Demo competency IDs:", seed_competencies(db, args.term, args.year))
     print("Demo usernames: demo.admin / demo.teacher / demo.parent")
     print(f"Initial demo password: {DEMO_PASSWORD} (existing passwords are never reset)")

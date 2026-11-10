@@ -200,10 +200,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("child-profile-banner").style.display = "flex";
         const query = new URLSearchParams(period);
         try {
-            const [analyticsRes, progressRes, assignmentsRes] = await Promise.all([
+            const [analyticsRes, progressRes, assignmentsRes, competenciesRes] = await Promise.all([
                 apiFetch(`/analytics/student/${child.student_id}?${query}`),
                 apiFetch(`/parent/children/${child.student_id}/progress?${query}`),
                 apiFetch(`/parent/children/${child.student_id}/assignments?${query}`),
+                apiFetch(`/parent/children/${child.student_id}/competencies?${query}`)
             ]);
             if (requestId !== state.requestId) return;
             if (!progressRes.ok) throw new Error("Unable to load learner progress. Please refresh to retry.");
@@ -236,6 +237,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (requestId !== state.requestId) return;
                 AssignmentParent.render(assignments);
             } else {AssignmentParent.error();}
+            if (competenciesRes.ok) {
+                const competencies = await competenciesRes.json();
+                if (requestId !== state.requestId) return;
+                CompetencyParent.render(competencies);
+            } else {CompetencyParent.error();}
             refreshStatus.textContent = `Updated ${new Date().toLocaleTimeString()}. Refreshes every 30 seconds.`;
         } catch (err) {
             if (requestId !== state.requestId) return;
@@ -243,6 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
             renderEmptyAnalytics();
             renderEmptyAssessments();
             AssignmentParent.error();
+            CompetencyParent.error();
             document.getElementById("assessment-progress").textContent = "Progress unavailable. Refresh to retry.";
             document.getElementById("attendance-summary").textContent = "Attendance unavailable.";
             document.getElementById("attendance-trend").replaceChildren();

@@ -54,6 +54,7 @@
             <span>🗒️</span>
             <span>Behaviour & Notes</span>
         </button>
+        <button id="tab-competencies" class="sub-nav-btn" data-target="section-competencies"><span>📘</span><span>Competency tracking</span></button>
         <button id="tab-class-assignments" class="sub-nav-btn" data-target="section-class-assignments"><span>📝</span><span>Assignments & Completion</span></button>
     </nav>
 
@@ -474,6 +475,19 @@
                 </table></div><button id="work-save-register" class="btn btn-purple" type="submit" disabled>Save completion register</button></form>
             </div>
         </section>
+        <section id="section-competencies" class="content-section">
+            <div class="section-card"><h3>Competency tracking</h3><p id="competency-context">Select an assigned class and subject.</p>
+                <p>Define classroom skills and record dated evidence using four performance levels. These are teacher-defined rubrics; official curriculum mapping has not been verified. Evidence does not change CatBoost predictions.</p>
+                <form id="competency-form"><div class="form-grid">
+                    <div class="form-group"><label for="competency-name">Competency / skill</label><input id="competency-name" class="form-control" maxlength="150" required></div>
+                    <div class="form-group"><label for="competency-strand">Strand / topic</label><input id="competency-strand" class="form-control" maxlength="150"></div></div>
+                    <div class="form-group"><label for="competency-description">What demonstrating this skill looks like</label><textarea id="competency-description" class="form-control" rows="3" maxlength="4000"></textarea></div>
+                    <button class="btn btn-purple" type="submit" disabled>Add competency</button></form>
+                <p id="competency-status" role="status" aria-live="polite"></p>
+            </div>
+            <div class="section-card"><div class="work-toolbar"><h3>Class competency catalog</h3><label><input type="checkbox" id="competency-include-archived"> Show archived</label><button id="competency-refresh" class="btn" type="button">Refresh competencies</button></div><div id="competency-list">Select a class to load competencies.</div></div>
+            <div id="competency-register" class="section-card" hidden></div>
+        </section>
 
 
     </main>
@@ -586,6 +600,7 @@
     <script src="JS/record-editor.js"></script>
     <script src="JS/teacher-dashboard.js"></script>
     <script src="JS/class-assignments.js"></script>
+    <script src="JS/competencies.js"></script>
 
     <!-- Notifications Drawer Backdrop -->
     <div id="notif-backdrop" class="notif-backdrop"></div>
