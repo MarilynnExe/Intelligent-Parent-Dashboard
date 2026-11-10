@@ -9,6 +9,7 @@ from app.routers.admin_crud import router as admin_crud_router
 from app.routers.assignments import router as assignments_router
 from app.routers.competencies import router as competencies_router
 from app.routers.messaging import router as messaging_router
+from app.routers.reports import router as reports_router
 from app.routers.auth import router as auth_router
 from app.routers.teacher import router as teacher_router
 from app.routers.teacher_crud import router as teacher_crud_router
@@ -44,6 +45,7 @@ app.add_middleware(
 app.include_router(assignments_router, prefix="/api")
 app.include_router(competencies_router, prefix="/api")
 app.include_router(messaging_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
 
 app.include_router(
     auth_router,

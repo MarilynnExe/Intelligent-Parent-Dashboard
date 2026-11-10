@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/admin-dashboard.css">
     <link rel="stylesheet" href="css/record-editor.css">
+    <link rel="stylesheet" href="css/school-reports.css">
 </head>
 
 <body>
@@ -52,6 +53,7 @@
             <span>⚖️</span>
             <span>Teacher Workload</span>
         </button>
+        <button id="tab-reports" class="sub-nav-btn" data-target="section-reports"><span>📈</span><span>School Reports</span></button>
     </nav>
 
     <!-- Main Dashboard Container -->
@@ -579,11 +581,42 @@
 
         </section>
 
+        <section id="section-reports" class="content-section">
+            <div class="section-card"><h3>School-wide reporting</h3>
+                <p>Read-only summaries of current active learners and recorded data. Historical periods use current enrollment and the current teacher-defined competency catalog. Private messages and evidence text are excluded.</p>
+                <form id="report-filters" class="report-filters">
+                    <label>Academic year<input id="report-year" type="number" min="1" max="9999" required></label>
+                    <label>Term<select id="report-term"><option>Term 1</option><option>Term 2</option><option>Term 3</option></select></label>
+                    <label>Grade<select id="report-grade"><option value="">All grades</option></select></label>
+                    <label>Stream<select id="report-stream"><option value="">All streams</option></select></label>
+                    <label class="report-check"><input id="report-compare" type="checkbox" checked> Compare previous term</label>
+                    <button id="report-generate" type="submit" class="btn btn-purple">Generate report</button>
+                </form><p id="report-status" role="status" aria-live="polite">Open School Reports to load the selected period.</p>
+                <p id="report-generated"></p>
+                <div class="report-export-controls"><label>CSV dataset<select id="report-export-dataset"><option value="summary">School summary</option><option value="grades">Grade summaries</option><option value="classes">Class summaries</option><option value="subjects">Subject summaries</option><option value="attendance_trend">Attendance trend</option><option value="learners">Learners — all follow-up matches</option></select></label><button id="report-export" type="button" class="btn" disabled>Download CSV</button></div>
+            </div>
+            <div id="report-results" hidden>
+                <div id="report-summary" class="report-cards"></div>
+                <div class="section-card"><h3>Previous-period comparison</h3><p id="report-comparison-note"></p><div id="report-comparison" class="table-responsive"></div></div>
+                <div class="section-card"><h3>Analytics freshness and advisory support</h3><p>Only current, valid stored predictions contribute to support totals. These are benchmark advisory indicators, without Kenyan validation. Reports do not recalculate analytics.</p><div id="report-freshness"></div></div>
+                <div class="section-card"><h3>By grade</h3><div id="report-grades" class="table-responsive"></div></div>
+                <div class="section-card"><h3>By class</h3><p>Blank streams are shown as No stream. Classes with no records remain visible.</p><div id="report-classes" class="table-responsive"></div></div>
+                <div class="section-card"><h3>Subjects with recorded assessments</h3><p>Each assessed learner has equal weight within a subject. Missing subject records are not zero scores; this is not a curriculum coverage measure.</p><div id="report-subjects" class="table-responsive"></div></div>
+                <div class="section-card"><h3>Recorded attendance by month</h3><p>Attendance rate excludes Excused and unrecorded learner-days. It does not assume an official school calendar.</p><div id="report-attendance" class="table-responsive"></div></div>
+                <div class="section-card"><h3>Learner follow-up register</h3><p>This filter affects only the learner table and learner CSV; school and class totals keep the selected grade/stream scope. No assessments and no evidence are distinct from low scores.</p>
+                    <label>Show<select id="report-issue"><option value="all">All active learners</option><option value="needs_calculation">Analytics need calculation</option><option value="no_assessments">No assessments recorded</option><option value="missing_work">Missing assignments</option><option value="competency_gaps">Unassessed competency slots</option></select></label>
+                    <p id="report-learners-count"></p><div id="report-learners" class="table-responsive"></div>
+                    <div class="report-pagination"><button id="report-prev" class="btn" type="button" disabled>Previous learners</button><button id="report-next" class="btn" type="button" disabled>Next learners</button></div>
+                </div>
+                <div class="section-card"><details><summary>Definitions and interpretation</summary><ul id="report-methodology"></ul></details></div>
+            </div>
+        </section>
     </main>
 
     <script src="JS/api.js"></script>
     <script src="JS/record-editor.js"></script>
     <script src="JS/admin-dashboard.js"></script>
+    <script src="JS/school-reports.js"></script>
 
 </body>
 

@@ -1,0 +1,18 @@
+
+#section-reports [hidden] {display:none!important;}
+.report-filters,.report-export-controls,.report-pagination {display:flex;flex-wrap:wrap;align-items:end;gap:1rem;margin:1rem 0;}
+.report-filters label,.report-export-controls label {display:grid;gap:.4rem;min-width:130px;flex:1;}
+#section-reports input:not([type=checkbox]),#section-reports select {padding:.6rem;border:1px solid #cbd5e1;border-radius:7px;font:inherit;min-width:0;max-width:100%;}
+.report-filters .report-check {display:flex;align-items:center;min-width:180px;}
+.report-cards {display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin:1rem 0;}
+.report-card {background:white;border:1px solid #e2e8f0;border-top:4px solid #8b5cf6;border-radius:12px;padding:1rem;overflow-wrap:anywhere;}
+.report-card strong {display:block;font-size:1.8rem;color:#5b21b6;margin:.5rem 0;}
+.report-card p,#section-reports p {line-height:1.6;}
+.report-card progress {width:100%;accent-color:#8b5cf6;}
+#section-reports th,#section-reports td {vertical-align:top;}
+#report-status {min-height:1.6em;}
+#report-freshness {display:flex;flex-wrap:wrap;gap:1rem;}
+.report-count {background:#f5f3ff;border-radius:8px;padding:.7rem;}
+#report-methodology li {line-height:1.6;margin:.6rem 0;}
+#section-reports summary {cursor:pointer;padding:.6rem 0;}
+@media(max-width:600px) {.report-filters label,.report-export-controls label {flex-basis:100%;min-width:0;} .report-filters button,.report-export-controls button {width:100%;} .report-cards {grid-template-columns:minmax(0,1fr);}}
