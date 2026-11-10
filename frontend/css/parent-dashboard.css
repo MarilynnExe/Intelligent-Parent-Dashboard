@@ -586,3 +586,22 @@ body {
         padding: 0 1rem;
     }
 }
+
+.period-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin: 1rem 0; }
+.period-toolbar label { display: grid; gap: .4rem; font-weight: 600; }
+.period-toolbar input, .period-toolbar select { padding: .65rem; border: 1px solid #cbd5e1; border-radius: .5rem; font: inherit; background: white; max-width: 10rem; }
+.freshness-note { padding: .8rem; margin-bottom: 1rem; background: #f1f5f9; border-radius: .5rem; line-height: 1.6; }
+.progress-subject { margin-top: 1.2rem; }
+.score-observation { display: grid; grid-template-columns: minmax(150px, 1fr) 2fr 4rem; align-items: center; gap: .75rem; padding: .5rem 0; }
+.score-observation meter { width: 100%; height: 1.2rem; }
+@media (max-width: 600px) { .score-observation { grid-template-columns: 1fr 4rem; } .score-observation span { grid-column: 1 / -1; } .period-toolbar { align-items: stretch; } }
+
+.child-selector-card > div { min-width: 0; max-width: 100%; }
+.child-select { min-width: 0; max-width: 100%; }
+@media (max-width: 600px) {
+    .navbar { padding: .85rem 1rem; }
+    .nav-user-info { flex-wrap: wrap; }
+    .child-profile-banner > div:first-child { min-width: 0; flex-wrap: wrap; }
+    .child-info { min-width: 0; }
+    .child-full-name, .child-info h2 { overflow-wrap: anywhere; }
+}

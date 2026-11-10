@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toast.innerHTML = `
             <span style="font-size: 1.1rem;">${icon}</span>
             <div style="flex: 1;">
-                <div style="font-size: 0.88rem; font-weight: 600;">${message}</div>
+                <div style="font-size: 0.88rem; font-weight: 600;">${escapeHtml(message)}</div>
             </div>
         `;
 
@@ -218,6 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!state.activeAssignment) return;
 
         const { grade_level, stream } = state.activeAssignment;
+        document.dispatchEvent(new CustomEvent("teacher-context-change", {detail:{
+            grade_level, stream, subject_name:state.activeAssignment.subject_name, ...state.period
+        }}));
         const tbody = document.getElementById("roster-tbody");
         tbody.innerHTML = `
             <tr>
@@ -256,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
             populateAssessmentStudentDropdown(students);
 
             // Populate Attendance Register
-            renderAttendanceRegister(students);
+            await loadSavedAttendance();
 
             // Render Roster Rows
             renderRosterRows(students);
@@ -370,6 +373,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         avgCell.innerHTML = `<strong>${data.overall_average.toFixed(1)}%</strong>`;
                     }
 
+                    if (avgCell && !data.is_current) avgCell.textContent = "—";
+
                     // Update Status Cell
                     const statusCell = document.getElementById(`cell-status-${s.student_id}`);
                     if (statusCell && data.support_status) {
@@ -404,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (status === "Targeted Support Recommended") {
             return `<span class="status-pill status-targeted">● Targeted Support${probText}</span>`;
         }
-        return `<span class="status-pill status-none">Not Yet Analyzed</span>`;
+        return `<span class="status-pill status-none">${status === "Recalculation needed" ? "Recalculation needed" : "Not Yet Analyzed"}</span>`;
     }
 
     function updateStatsStrip(students, counts = {}) {
@@ -525,6 +530,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 "success"
             );
 
+            if (data.analytics_refresh?.status !== "current") {
+                showToast("Assessment saved. Some analytics need calculation. Open learner insights and select Recalculate to retry.", "info", 7000);
+            }
+            // Refresh every classmate: a changed score affects their percentile too.
+            await loadClassStudents();
+
             // Reset score inputs
             scoreInput.value = "";
             pctPreview.textContent = "—";
@@ -603,21 +614,22 @@ document.addEventListener("DOMContentLoaded", () => {
             allAssessments.sort((a, b) => new Date(b.assessment_date) - new Date(a.assessment_date));
 
             tbody.innerHTML = "";
-            allAssessments.slice(0, 15).forEach(item => {
+            state.assessmentRows = allAssessments;
+            allAssessments.forEach(item => {
                 const tr = document.createElement("tr");
                 const isFail = item.percentage < 50;
                 tr.innerHTML = `
                     <td style="font-size: 0.85rem; color: var(--text-muted);">${item.assessment_date || "—"}</td>
-                    <td class="student-name-cell">${item.student_name}</td>
-                    <td>${item.subject_name}</td>
-                    <td><span style="font-size: 0.85rem;">${item.assessment_type}</span></td>
+                    <td class="student-name-cell">${escapeHtml(item.student_name)}</td>
+                    <td>${escapeHtml(item.subject_name)}</td>
+                    <td><span style="font-size: 0.85rem;">${escapeHtml(item.assessment_type)}</span></td>
                     <td><span style="font-size: 0.85rem;">${item.term}</span></td>
                     <td>${item.score} / ${item.max_score}</td>
                     <td>
                         <strong style="color: ${isFail ? 'var(--pastel-pink-text)' : 'var(--pastel-purple-text)'};">
                             ${item.percentage.toFixed(1)}%
                         </strong>
-                    </td>
+                    </td><td class="record-actions"><button data-record="assessments" data-edit="${item.assessment_id}">Edit</button><button data-record="assessments" data-remove="${item.assessment_id}">Delete</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -637,7 +649,38 @@ document.addEventListener("DOMContentLoaded", () => {
     // -------------------------------------------------------------------------
     // 8. Daily Attendance Register (Bulk)
     // -------------------------------------------------------------------------
-    function renderAttendanceRegister(students) {
+    let registerRequest = 0;
+    let registerLoaded = false;
+    async function loadSavedAttendance() {
+        if (!state.activeAssignment) return;
+        const request = ++registerRequest;
+        registerLoaded = false;
+        document.getElementById("register-status").textContent = "Loading saved register…";
+        document.getElementById("attendance-tbody").innerHTML = '<tr><td colspan="6">Loading saved attendance…</td></tr>';
+        const button = document.getElementById("btn-submit-attendance");
+        button.disabled = true;
+        const {grade_level, stream} = state.activeAssignment;
+        const record_date = document.getElementById("attendance-date").value;
+        const query = new URLSearchParams({grade_level, stream, record_date});
+        try {
+            const res = await apiFetch(`/teacher/attendance?${query}`);
+            if (!res.ok) throw new Error("Unable to load the saved register. Refresh before saving.");
+            const records = await res.json();
+            if (request !== registerRequest) return;
+            state.savedAttendance = records;
+            renderAttendanceRegister(state.students, new Map(records.map(row => [row.student_id, row])));
+            registerLoaded = true;
+            document.getElementById("register-status").textContent = `${records.length} saved entries loaded. Unrecorded learners remain unmarked.`;
+        } catch (error) {
+            if (request !== registerRequest) return;
+            document.getElementById("attendance-tbody").replaceChildren();
+            document.getElementById("register-status").textContent = error.message;
+        } finally {if (request === registerRequest) button.disabled = !registerLoaded;}
+    }
+    document.getElementById("attendance-date").addEventListener("change", loadSavedAttendance);
+    document.getElementById("btn-load-register").addEventListener("click", loadSavedAttendance);
+
+    function renderAttendanceRegister(students, saved = new Map()) {
         const tbody = document.getElementById("attendance-tbody");
         if (!students || students.length === 0) {
             tbody.innerHTML = `
@@ -654,10 +697,10 @@ document.addEventListener("DOMContentLoaded", () => {
         state.attendanceRecords = {};
 
         students.forEach((student, idx) => {
-            // Default to Present
+            const record = saved.get(student.student_id);
             state.attendanceRecords[student.student_id] = {
-                status: "Present",
-                remarks: ""
+                status: record?.status || null,
+                remarks: record?.remarks || ""
             };
 
             const tr = document.createElement("tr");
@@ -667,24 +710,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td class="student-name-cell">${student.first_name} ${student.last_name}</td>
                 <td>
                     <div class="att-status-group" data-student-id="${student.student_id}">
-                        <button type="button" class="att-status-btn selected-present" data-status="Present">
+                        <button type="button" class="att-status-btn ${record?.status === "Present" ? "selected-present" : ""}" data-status="Present">
                             Present
                         </button>
-                        <button type="button" class="att-status-btn" data-status="Absent">
+                        <button type="button" class="att-status-btn ${record?.status === "Absent" ? "selected-absent" : ""}" data-status="Absent">
                             Absent
                         </button>
-                        <button type="button" class="att-status-btn" data-status="Late">
+                        <button type="button" class="att-status-btn ${record?.status === "Late" ? "selected-late" : ""}" data-status="Late">
                             Late
                         </button>
-                    </div>
+                        <button type="button" class="att-status-btn ${record?.status === "Excused" ? "selected-late" : ""}" data-status="Excused">Excused</button>
+                    </div><span class="record-status">${record ? "Saved" : "Not recorded"}</span>
                 </td>
                 <td>
                     <input type="text"
                            class="form-control att-remarks-input"
                            style="padding: 0.35rem 0.65rem; font-size: 0.85rem;"
-                           placeholder="e.g. Illness, Excused"
+                           placeholder="e.g. Illness, Excused" maxlength="255" value="${escapeHtml(record?.remarks || "")}"
                            data-student-id="${student.student_id}">
-                </td>
+                </td><td class="record-actions">${record ? `<button data-record="attendance" data-remove="${record.attendance_id}">Delete saved entry</button>` : "—"}</td>
             `;
 
             tbody.appendChild(tr);
@@ -706,7 +750,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (status === "Present") btn.classList.add("selected-present");
                     else if (status === "Absent") btn.classList.add("selected-absent");
-                    else if (status === "Late") btn.classList.add("selected-late");
+                    else if (status === "Late" || status === "Excused") btn.classList.add("selected-late");
                 });
             });
         });
@@ -722,6 +766,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Mark All Present Shortcut
     document.getElementById("btn-mark-all-present").addEventListener("click", () => {
+        if (!registerLoaded) return;
         Object.keys(state.attendanceRecords).forEach(sId => {
             state.attendanceRecords[sId].status = "Present";
         });
@@ -753,12 +798,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const entries = state.students.map(s => ({
+        if (!registerLoaded) {showToast("Load the saved register before saving.", "error"); return;}
+        const entries = state.students.filter(s => state.attendanceRecords[s.student_id]?.status).map(s => ({
             student_id: s.student_id,
-            status: state.attendanceRecords[s.student_id]?.status || "Present",
+            status: state.attendanceRecords[s.student_id].status,
             remarks: state.attendanceRecords[s.student_id]?.remarks || null
         }));
 
+        if (!entries.length) {showToast("Select attendance statuses or mark all present before saving.", "info"); return;}
         const payload = {
             record_date: recordDate,
             entries: entries
@@ -782,6 +829,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 `Daily attendance successfully saved for ${data.updated} learners!`,
                 "success"
             );
+            if (Object.values(data.analytics_refresh || {}).some(result => result.status !== "current")) {
+                showToast("Attendance saved. Some analytics need calculation. Use Analyze Risk / Recalculate to retry.", "info", 7000);
+            }
+            await loadExistingAnalyticsForRoster(state.students);
+            await loadSavedAttendance();
             if (data.skipped_student_ids && data.skipped_student_ids.length > 0) {
                 showToast(
                     `${data.skipped_student_ids.length} learner(s) were skipped because they are not in your assigned classes.`,
@@ -843,6 +895,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             const behaviour = await bRes.json();
             const observations = await oRes.json();
+            state.behaviourRows = behaviour;
+            state.observationRows = observations;
 
             behaviourBody.innerHTML = behaviour.length === 0
                 ? `<tr><td colspan="4" class="state-box"><p>No behaviour ratings recorded yet.</p></td></tr>`
@@ -851,7 +905,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(r.record_date)}</td>
                         <td>${escapeHtml(r.category)}</td>
                         <td>${ratingPill(r.rating)}</td>
-                        <td>${escapeHtml(r.teacher_note || "—")}</td>
+                        <td>${escapeHtml(r.teacher_note || "—")}</td><td class="record-actions"><button data-record="behaviour" data-edit="${r.record_id}">Edit</button><button data-record="behaviour" data-remove="${r.record_id}">Delete</button></td>
                     </tr>`).join("");
 
             observationsBody.innerHTML = observations.length === 0
@@ -860,7 +914,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <tr>
                         <td style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(o.observation_date)}</td>
                         <td><span style="font-size: 0.85rem;">${escapeHtml(o.term)} ${escapeHtml(o.academic_year)}</span></td>
-                        <td>${escapeHtml(o.observation_text)}</td>
+                        <td>${escapeHtml(o.observation_text)}</td><td class="record-actions"><button data-record="observations" data-edit="${o.observation_id}">Edit</button><button data-record="observations" data-remove="${o.observation_id}">Delete</button></td>
                     </tr>`).join("");
 
         } catch (err) {
@@ -888,6 +942,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error(detail || "Failed to save record.");
             }
             showToast(successMessage, "success");
+            if (data.analytics_refresh) {
+                if (Object.values(data.analytics_refresh).some(result => result.status !== "current")) {
+                    showToast("Record saved. Some analytics need calculation. Use Analyze Risk / Recalculate to retry.", "info", 7000);
+                }
+                await loadExistingAnalyticsForRoster(state.students);
+            }
             onSuccess();
             loadLearnerHistory(payload.student_id);
         } catch (err) {
@@ -988,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function calculateLearnerAnalytics(studentId) {
         modalLoading.style.display = "block";
+        document.getElementById("teacher-analytics-freshness").textContent = "Calculating current analytics…";
         modalError.style.display = "none";
         modalContent.style.display = "none";
 
@@ -1013,12 +1074,18 @@ document.addEventListener("DOMContentLoaded", () => {
             // Update row in table
             updateRosterRowWithAnalytics(studentId, data);
 
+            // Refresh notification count
+            if (window.NotificationController) {
+                window.NotificationController.refreshUnreadCount();
+            }
+
         } catch (err) {
             console.error("CatBoost Analytics Error:", err);
             modalLoading.style.display = "none";
             modalError.style.display = "block";
+            document.getElementById("teacher-analytics-freshness").textContent = "Analytics unavailable. Saved records are preserved. Use Recalculate to retry.";
             modalErrorText.innerHTML = `
-                <strong>Prediction Unavailable:</strong> ${err.message}
+                <strong>Prediction Unavailable:</strong> ${escapeHtml(err.message)}
             `;
         }
     }
@@ -1028,6 +1095,8 @@ document.addEventListener("DOMContentLoaded", () => {
         modalError.style.display = "none";
         modalContent.style.display = "block";
 
+        document.getElementById("teacher-analytics-freshness").textContent =
+            `Analytics: ${data.freshness}. Last calculated: ${new Date(data.calculated_at + "Z").toLocaleString()}`;
         const prob = data.support_probability;
         const probPct = (prob * 100).toFixed(1) + "%";
         const status = data.support_status;
@@ -1082,15 +1151,51 @@ document.addEventListener("DOMContentLoaded", () => {
             const priorityClass = rec.priority === "High"
                 ? "priority-high"
                 : (rec.priority === "Medium" ? "priority-medium" : "priority-low");
+            const lp = rec.learning_path;
+
+            let alignmentBadgeHtml = "";
+            let lpDetailsHtml = "";
+
+            if (lp) {
+                if (lp.alignment_type === "CURRICULUM_ALIGNED") {
+                    alignmentBadgeHtml = `<span class="alignment-pill pill-curriculum" title="${escapeHtml(lp.alignment_source || 'KICD Junior Secondary Curriculum')}">✓ CBC Curriculum Aligned</span>`;
+                } else {
+                    alignmentBadgeHtml = `<span class="alignment-pill pill-provisional" title="${escapeHtml(lp.alignment_source || 'Provisional Learning Support')}">ℹ️ Provisional Learning Support</span>`;
+                }
+
+                lpDetailsHtml = `
+                    <div class="lp-detail-container">
+                        <div class="lp-topic">🎯 <strong>Learning Area & Skill:</strong> ${escapeHtml(lp.subject_name)} — <em>${escapeHtml(lp.topic_competency)}</em></div>
+                        <div class="lp-reason">💡 <strong>Why this was suggested:</strong> ${escapeHtml(lp.reason)}</div>
+                        <div class="lp-activity-box">
+                            <div class="lp-activity-title">📌 <strong>Learning Activity:</strong> ${escapeHtml(lp.activity_title)}</div>
+                            <div class="lp-activity-desc">${escapeHtml(lp.activity_description)}</div>
+                            ${lp.suggested_duration ? `<div class="lp-duration">⏱️ <strong>Frequency / Duration:</strong> ${escapeHtml(lp.suggested_duration)}</div>` : ''}
+                        </div>
+                        <div class="lp-resource-box">
+                            <div class="lp-resource-header">
+                                <span>📖 <strong>Resource:</strong> ${escapeHtml(lp.resource_title)}</span>
+                                ${lp.resource_url ? `<a href="${escapeHtml(lp.resource_url)}" target="_blank" rel="noopener noreferrer" class="btn-resource-link">🔗 Open Resource ↗</a>` : ''}
+                            </div>
+                            ${lp.resource_description ? `<div class="lp-resource-desc">${escapeHtml(lp.resource_description)}</div>` : ''}
+                        </div>
+                        ${lp.recommended_next_step ? `<div class="lp-next-step">🚀 <strong>Recommended Next Step:</strong> ${escapeHtml(lp.recommended_next_step)}</div>` : ''}
+                    </div>
+                `;
+            }
 
             const div = document.createElement("div");
             div.className = "rec-card";
             div.innerHTML = `
                 <div class="rec-card-header">
-                    <span class="rec-badge-priority ${priorityClass}">Priority: ${rec.priority}</span>
-                    <span class="rec-badge-audience">Target: ${rec.target_audience}</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span class="rec-badge-priority ${priorityClass}">Priority: ${rec.priority}</span>
+                        <span class="rec-badge-audience">Target: ${rec.target_audience}</span>
+                    </div>
+                    ${alignmentBadgeHtml}
                 </div>
                 <div class="rec-text">${rec.recommendation_text}</div>
+                ${lpDetailsHtml}
             `;
             recList.appendChild(div);
         });
@@ -1114,5 +1219,42 @@ document.addEventListener("DOMContentLoaded", () => {
     // 10. Bootstrap Dashboard
     // -------------------------------------------------------------------------
     loadAssignments();
+
+    function correctionFields(kind) {
+        const f = (name, label, extra = {}) => ({name, label, ...extra});
+        const periods = [f("term", "Term", {options:["Term 1", "Term 2", "Term 3"]}), f("academic_year", "Academic year")];
+        if (kind === "assessments") return [f("subject_name", "Subject"), ...periods,
+            f("assessment_type", "Assessment type"), f("score", "Score", {type:"number",min:0}), f("max_score", "Maximum score", {type:"number",min:.01}), f("assessment_date", "Date", {type:"date"})];
+        if (kind === "behaviour") return [f("category", "Category", {maxLength:50}), f("rating", "Rating", {options:[1,2,3,4,5]}),
+            f("record_date", "Date", {type:"date"}), f("teacher_note", "Teacher note", {type:"textarea",required:false,maxLength:500})];
+        return [...periods, f("observation_date", "Date", {type:"date"}), f("observation_text", "Observation", {type:"textarea",maxLength:1000})];
+    }
+    async function reloadCorrected(kind) {
+        await loadExistingAnalyticsForRoster(state.students);
+        if (kind === "assessments") await loadRecentAssessments(state.students);
+        else if (kind === "attendance") await loadSavedAttendance();
+        else if (selectedNotesStudentId()) await loadLearnerHistory(selectedNotesStudentId());
+    }
+    document.addEventListener("click", async event => {
+        const button = event.target.closest("[data-record]");
+        if (!button) return;
+        const kind = button.dataset.record;
+        const id = Number(button.dataset.edit || button.dataset.remove);
+        const source = {assessments:state.assessmentRows, behaviour:state.behaviourRows, observations:state.observationRows, attendance:state.savedAttendance}[kind] || [];
+        const row = source.find(r => (r.assessment_id || r.record_id || r.observation_id || r.attendance_id) === id);
+        if (!row) return;
+        const path = `/teacher/${kind}/${id}`;
+        try {
+            if (button.dataset.remove) {
+                if (!confirm("Delete this incorrect record? Its previous values will remain in correction history and affected analytics will be recalculated.")) return;
+                await RecordEditor.request(path, "DELETE");
+                await reloadCorrected(kind); showToast("Record removed.", "success"); return;
+            }
+            RecordEditor.open({title:`Correct ${kind} record`, values:row, fields:correctionFields(kind), onSave:async values => {
+                await RecordEditor.request(path, "PUT", {...values, student_id:row.student_id});
+                await reloadCorrected(kind); showToast("Correction saved. Analytics refreshed where available.", "success");
+            }});
+        } catch (error) {showToast(error.message, "error");}
+    });
 
 });

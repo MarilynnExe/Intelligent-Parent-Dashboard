@@ -159,3 +159,138 @@ body {
         padding-right: 1rem;
     }
 }
+
+
+/* ==========================================================================
+   Learning Path & Educational Resource Styles (CBC Aligned & Provisional)
+   ========================================================================== */
+
+.alignment-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.pill-curriculum {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.pill-provisional {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.lp-detail-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+}
+
+.lp-topic {
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.lp-reason {
+    font-size: 0.88rem;
+    color: #334155;
+    background: #f8fafc;
+    border-left: 3px solid #8b5cf6;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0 6px 6px 0;
+    line-height: 1.45;
+}
+
+.lp-activity-box {
+    background: linear-gradient(135deg, #faf5ff 0%, #f0f9ff 100%);
+    border: 1.5px solid #ddd6fe;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.lp-activity-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #6d28d9;
+}
+
+.lp-activity-desc {
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.lp-duration {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 600;
+    margin-top: 0.2rem;
+}
+
+.lp-resource-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.lp-resource-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.lp-resource-desc {
+    font-size: 0.82rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.btn-resource-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #0ea5e9;
+    color: #ffffff !important;
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.btn-resource-link:hover {
+    background: #0284c7;
+}
+
+.lp-next-step {
+    font-size: 0.85rem;
+    color: #1e293b;
+    background: #fdf2f8;
+    border: 1px dashed #fbcfe8;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    line-height: 1.45;
+}

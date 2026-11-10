@@ -8,6 +8,7 @@
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/admin-dashboard.css">
+    <link rel="stylesheet" href="css/record-editor.css">
 </head>
 
 <body>
@@ -46,6 +47,10 @@
         <button id="tab-assignments" class="sub-nav-btn" data-target="section-assignments">
             <span>🔗</span>
             <span>Class & Parent Links</span>
+        </button>
+        <button id="tab-workload" class="sub-nav-btn" data-target="section-workload">
+            <span>⚖️</span>
+            <span>Teacher Workload</span>
         </button>
     </nav>
 
@@ -184,7 +189,7 @@
                 <div class="section-header">
                     <div>
                         <h3>Registered Portal Users</h3>
-                        <p>All active system user accounts.</p>
+                        <p>Portal accounts, including deactivated accounts with preserved history.</p>
                     </div>
                 </div>
 
@@ -198,7 +203,8 @@
                                 <th>System Role</th>
                                 <th>Phone Number</th>
                                 <th>Registered Date</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="users-tbody">
                             <tr>
@@ -299,7 +305,8 @@
                                 <th>Gender</th>
                                 <th>Date of Birth</th>
                                 <th>Enrolled At</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="students-tbody">
                             <tr>
@@ -456,9 +463,126 @@
 
         </section>
 
+        <!-- ================================================================= -->
+        <!-- TAB 5: TEACHER WORKLOAD BALANCER                                  -->
+        <!-- ================================================================= -->
+        <section id="section-workload" class="content-section">
+
+            <!-- Welcome Banner -->
+            <div class="welcome-banner">
+                <div>
+                    <h2>Teacher Workload Monitoring & Balancing</h2>
+                    <p>Visibility into teaching responsibilities, learner intervention burdens, and administrative capacity across staff.</p>
+                </div>
+                <button id="btn-refresh-workload" class="btn btn-purple btn-sm">
+                    🔄 Refresh Workload Report
+                </button>
+            </div>
+
+            <!-- Workload Summary Stats Strip -->
+            <div class="stats-strip">
+                <div class="stat-box stat-purple">
+                    <div class="stat-box-title">Staff Capacity Status</div>
+                    <div id="stat-wl-status" class="stat-box-value" style="font-size: 1.15rem; font-weight: 800;">—</div>
+                    <div id="stat-wl-active-sub" class="stat-box-subtitle">Active vs Unassigned teachers</div>
+                </div>
+                <div class="stat-box stat-pink">
+                    <div class="stat-box-title">High Workload Teachers</div>
+                    <div id="stat-wl-high" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Teachers at or near capacity</div>
+                </div>
+                <div class="stat-box stat-blue">
+                    <div class="stat-box-title">Avg Learners / Active Teacher</div>
+                    <div id="stat-wl-avg-learners" class="stat-box-value">—</div>
+                    <div class="stat-box-subtitle">Average class roster load</div>
+                </div>
+                <div class="stat-box stat-amber" style="background: var(--pastel-amber-bg, #fffbeb); border-color: var(--pastel-amber-border, #fde68a);">
+                    <div class="stat-box-title" style="color: var(--pastel-amber-text, #b45309);">Targeted Support Learners</div>
+                    <div id="stat-wl-targeted" class="stat-box-value" style="color: var(--pastel-amber-text, #b45309);">—</div>
+                    <div class="stat-box-subtitle">Requiring intensive teacher support</div>
+                </div>
+            </div>
+
+            <!-- Administrative Balancing Recommendations Card -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Administrative Balancing Suggestions</h3>
+                        <p>Actionable observations to assist administrators in redistributing streams or reallocating support staff.</p>
+                    </div>
+                </div>
+                <div id="workload-recommendations-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div class="state-box">
+                        <div class="state-spinner"></div>
+                        <p>Evaluating teacher workload distribution...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teacher Workload Comparison Table -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div>
+                        <h3>Teacher Workload Comparison</h3>
+                        <p>Real-time instructional assignments, class rosters, and intervention density.</p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <label for="workload-filter-status" style="font-size: 0.85rem; font-weight: 600;">Filter:</label>
+                        <select id="workload-filter-status" class="form-control" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.85rem;">
+                            <option value="ALL">All Teachers</option>
+                            <option value="HIGH">High Workload</option>
+                            <option value="MODERATE">Moderate Workload</option>
+                            <option value="LOW">Available Capacity</option>
+                            <option value="UNASSIGNED">No Active Assignments</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Teacher</th>
+                                <th>Assigned Classes & Subjects</th>
+                                <th style="text-align: center;">Learners</th>
+                                <th>Support Breakdown</th>
+                                <th style="text-align: center;" title="Supplementary operational indicator; not included in workload score">Operational Alerts<small style="display:block;font-size:0.72rem;text-transform:none;color:var(--text-muted);font-weight:normal;">(Not in score)</small></th>
+                                <th>Workload Status</th>
+                                <th>Operational Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-workload-tbody">
+                            <tr>
+                                <td colspan="7" class="state-box">
+                                    <div class="state-spinner"></div>
+                                    <p>Loading teacher workload records...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Scoring Methodology Disclaimer -->
+            <div class="section-card" style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 1.25rem;">
+                <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                    <span style="font-size: 1.25rem;">ℹ️</span>
+                    <div>
+                        <h4 style="font-size: 0.92rem; font-weight: 700; margin: 0 0 0.35rem 0; color: var(--text-heading);">Workload Scoring Methodology Note</h4>
+                        <p id="workload-methodology-note" style="font-size: 0.84rem; color: var(--text-muted); margin: 0; line-height: 1.45;">
+                            Workload Score = (Assigned Learners x 1.0) + (Class Cohorts x 3.0) + (Subject-Class Preparations x 2.0) + (Targeted Support Learners x 3.0) + (Monitoring Learners x 1.5). These classifications (HIGH, MODERATE, LOW, UNASSIGNED) are system-defined operational triage indicators established for administrative resource allocation. Unread notifications and operational alerts are displayed for administrative context only and do not factor into the score. This score is NOT a clinically or scientifically validated measure of teacher burnout or official Ministry of Education workload standard.
+                            This index is an administrative operational heuristic designed to highlight assignment disparities and intervention burdens. It is NOT a clinically or scientifically validated measure of teacher burnout.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
     </main>
 
     <script src="JS/api.js"></script>
+    <script src="JS/record-editor.js"></script>
     <script src="JS/admin-dashboard.js"></script>
 
 </body>

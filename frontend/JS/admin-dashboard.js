@@ -150,17 +150,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderUsers() {
         const tbody = document.getElementById("users-tbody");
         if (state.users.length === 0) {
-            tbody.innerHTML = stateRow(6, "No users registered yet.");
+            tbody.innerHTML = stateRow(7, "No users registered yet.");
             return;
         }
         tbody.innerHTML = state.users.map(u => `
             <tr>
                 <td style="color: var(--text-muted);">${u.user_id}</td>
-                <td><strong>${escapeHtml(u.full_name)}</strong></td>
+                <td><strong>${escapeHtml(u.full_name)}</strong><span class="record-status">${u.is_active ? "Active" : "Deactivated"}</span></td>
                 <td>${escapeHtml(u.email_or_username)}</td>
                 <td>${rolePill(u.role)}</td>
                 <td>${escapeHtml(u.phone_number || "—")}</td>
                 <td>${formatDate(u.created_at)}</td>
+                <td class="record-actions"><button data-crud="edit-user" data-id="${u.user_id}">Edit</button><button data-crud="toggle-user" data-id="${u.user_id}">${u.is_active ? "Deactivate" : "Restore"}</button></td>
             </tr>
         `).join("");
     }
@@ -183,8 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function refreshUserSelects() {
-        const teachers = state.users.filter(u => u.role === "TEACHER");
-        const parents = state.users.filter(u => u.role === "PARENT");
+        const teachers = state.users.filter(u => u.role === "TEACHER" && u.is_active !== false);
+        const parents = state.users.filter(u => u.role === "PARENT" && u.is_active !== false);
 
         fillSelect("assign-teacher-select", teachers,
             teachers.length ? "Select teacher..." : "No teacher accounts yet",
@@ -203,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
             refreshUserSelects();
         } catch (err) {
             console.error("Users Error:", err);
-            tbody.innerHTML = stateRow(6, err.message, true);
+            tbody.innerHTML = stateRow(7, err.message, true);
         }
     }
 
@@ -240,18 +241,19 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderStudents() {
         const tbody = document.getElementById("students-tbody");
         if (state.students.length === 0) {
-            tbody.innerHTML = stateRow(7, "No learners enrolled yet.");
+            tbody.innerHTML = stateRow(8, "No learners enrolled yet.");
             return;
         }
         tbody.innerHTML = state.students.map(s => `
             <tr>
                 <td style="color: var(--text-muted);">${s.student_id}</td>
                 <td>${escapeHtml(s.admission_number)}</td>
-                <td><strong>${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</strong></td>
+                <td><strong>${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</strong><span class="record-status">${s.is_archived ? "Archived" : "Active"}</span></td>
                 <td>${escapeHtml(s.grade_level)} ${escapeHtml(s.stream || "")}</td>
                 <td>${escapeHtml(s.gender || "—")}</td>
                 <td>${escapeHtml(s.date_of_birth)}</td>
                 <td>${formatDate(s.created_at)}</td>
+                <td class="record-actions"><button data-crud="edit-student" data-id="${s.student_id}">Edit</button><button data-crud="toggle-student" data-id="${s.student_id}">${s.is_archived ? "Restore" : "Archive"}</button></td>
             </tr>
         `).join("");
     }
@@ -261,7 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             state.students = await apiJson("/admin/students", {}, "Failed to load learners.");
             renderStudents();
-            fillSelect("link-student-select", state.students,
+            fillSelect("link-student-select", state.students.filter(s => !s.is_archived),
                 state.students.length ? "Select learner..." : "No learners enrolled yet",
                 s => ({
                     value: s.student_id,
@@ -269,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
         } catch (err) {
             console.error("Students Error:", err);
-            tbody.innerHTML = stateRow(7, err.message, true);
+            tbody.innerHTML = stateRow(8, err.message, true);
         }
     }
 
@@ -309,6 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tbody = document.getElementById("assignments-tbody");
         try {
             const rows = await apiJson("/admin/teacher-assignments", {}, "Failed to load assignments.");
+            state.assignmentRows = rows;
             if (rows.length === 0) {
                 tbody.innerHTML = stateRow(5, "No teacher assignments yet.");
                 return;
@@ -320,6 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${escapeHtml(a.stream)}</td>
                     <td>${escapeHtml(a.subject_name)}</td>
                     <td style="text-align: right;">
+                        <button class="btn btn-sm" data-crud="edit-assignment" data-id="${a.assignment_id}">Edit</button>
                         <button class="btn-outline-danger-sm btn-delete-assignment" data-id="${a.assignment_id}"
                                 data-label="${escapeHtml(`${a.teacher_name} — ${a.subject_name}, ${a.grade_level} ${a.stream}`)}">
                             Remove
@@ -385,6 +389,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tbody = document.getElementById("parent-links-tbody");
         try {
             const rows = await apiJson("/admin/parent-links", {}, "Failed to load parent links.");
+            state.linkRows = rows;
             if (rows.length === 0) {
                 tbody.innerHTML = stateRow(5, "No parent-learner links yet.");
                 return;
@@ -396,6 +401,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${escapeHtml(l.admission_number)}</td>
                     <td>${escapeHtml(l.relationship_type || "—")}</td>
                     <td style="text-align: right;">
+                        <button class="btn btn-sm" data-crud="edit-link" data-id="${l.id}">Edit</button>
                         <button class="btn-outline-danger-sm btn-delete-link" data-id="${l.id}"
                                 data-label="${escapeHtml(`${l.parent_name} → ${l.student_name}`)}">
                             Unlink
@@ -454,6 +460,222 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+
+    // -------------------------------------------------------------------------
+    // 8. Teacher Workload Monitoring & Balancing
+    // -------------------------------------------------------------------------
+    let workloadCache = null;
+
+    async function loadWorkload() {
+        const tbody = document.getElementById("teacher-workload-tbody");
+        const recsContainer = document.getElementById("workload-recommendations-list");
+        if (!tbody || !recsContainer) return;
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="state-box">
+                    <div class="state-spinner"></div>
+                    <p>Loading teacher workload records...</p>
+                </td>
+            </tr>
+        `;
+        recsContainer.innerHTML = `
+            <div class="state-box">
+                <div class="state-spinner"></div>
+                <p>Evaluating teacher workload distribution...</p>
+            </div>
+        `;
+
+        try {
+            const report = await apiJson("/admin/teacher-workload", {}, "Failed to load teacher workload report.");
+            workloadCache = report;
+
+            // Update Summary Stats
+            const s = report.summary;
+            const statusEl = document.getElementById("stat-wl-status");
+            if (statusEl) {
+                statusEl.textContent = s.capacity_status;
+                if (s.high_workload_count > 0 && (s.low_workload_count > 0 || s.unassigned_teachers_count > 0)) {
+                    statusEl.style.color = "var(--pastel-pink-text, #be185d)";
+                } else if (s.high_workload_count > 0) {
+                    statusEl.style.color = "var(--pastel-amber-text, #b45309)";
+                } else {
+                    statusEl.style.color = "var(--pastel-green-text, #15803d)";
+                }
+            }
+
+            const activeSubEl = document.getElementById("stat-wl-active-sub");
+            if (activeSubEl) {
+                activeSubEl.textContent = `${s.active_teachers_count} active / ${s.unassigned_teachers_count} unassigned of ${s.total_teachers} teachers`;
+            }
+
+            const highEl = document.getElementById("stat-wl-high");
+            if (highEl) {
+                highEl.textContent = s.high_workload_count;
+                highEl.style.color = s.high_workload_count > 0 ? "var(--pastel-pink-text, #be185d)" : "var(--text-heading)";
+            }
+
+            const avgEl = document.getElementById("stat-wl-avg-learners");
+            if (avgEl) {
+                avgEl.textContent = s.average_learners_per_teacher;
+            }
+
+            const targetedEl = document.getElementById("stat-wl-targeted");
+            if (targetedEl) {
+                targetedEl.textContent = s.total_targeted_support_learners;
+            }
+
+            const methEl = document.getElementById("workload-methodology-note");
+            if (methEl && report.scoring_methodology) {
+                methEl.textContent = report.scoring_methodology;
+            }
+
+            // Render Balancing Recommendations
+            renderWorkloadRecommendations(report.balancing_recommendations);
+
+            // Render Teacher Table (with current filter)
+            renderWorkloadTable(report.teachers);
+
+        } catch (err) {
+            console.error("Workload Error:", err);
+            tbody.innerHTML = stateRow(7, err.message, true);
+            recsContainer.innerHTML = `<div class="state-box"><p style="color: var(--pastel-pink-text);">${escapeHtml(err.message)}</p></div>`;
+        }
+    }
+
+    function renderWorkloadRecommendations(recommendations) {
+        const container = document.getElementById("workload-recommendations-list");
+        if (!container) return;
+
+        if (!recommendations || recommendations.length === 0) {
+            container.innerHTML = `
+                <div class="state-box" style="padding: 1rem;">
+                    <p>No balancing recommendations available at this time.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = recommendations.map(rec => {
+            const prioClass = rec.priority === "High" ? "prio-high" : (rec.priority === "Medium" ? "prio-medium" : "prio-low");
+            const icon = rec.priority === "High" ? "⚠️" : (rec.recommendation_type === "BALANCED" ? "✅" : "💡");
+            const prioBadgeColor = rec.priority === "High" ? "background: #fee2e2; color: #991b1b;" : (rec.priority === "Medium" ? "background: #fef3c7; color: #92400e;" : "background: #dcfce7; color: #166534;");
+
+            return `
+                <div class="balancing-card ${prioClass}">
+                    <span style="font-size: 1.25rem; line-height: 1;">${icon}</span>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <span style="font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; ${prioBadgeColor}">
+                                ${escapeHtml(rec.priority)} Priority
+                            </span>
+                            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">
+                                ${escapeHtml(rec.recommendation_type.replace(/_/g, " "))}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.88rem; color: var(--text-body); line-height: 1.45;">
+                            ${escapeHtml(rec.message)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function renderWorkloadTable(teachers) {
+        const tbody = document.getElementById("teacher-workload-tbody");
+        if (!tbody) return;
+
+        const filterVal = document.getElementById("workload-filter-status")?.value || "ALL";
+        const filtered = filterVal === "ALL" ? teachers : teachers.filter(t => t.workload_status === filterVal);
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = stateRow(7, "No teachers match the selected workload filter.");
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(t => {
+            // Status badge
+            let badgeClass = "badge-low";
+            let statusIcon = "🟢";
+            if (t.workload_status === "HIGH") {
+                badgeClass = "badge-high";
+                statusIcon = "🔴";
+            } else if (t.workload_status === "MODERATE") {
+                badgeClass = "badge-moderate";
+                statusIcon = "🟡";
+            } else if (t.workload_status === "UNASSIGNED") {
+                badgeClass = "badge-unassigned";
+                statusIcon = "⚪";
+            }
+
+            // Classes & subjects markup
+            const classesMarkup = t.assigned_classes.length > 0
+                ? `<div style="font-weight: 600; color: var(--text-heading);">${t.assigned_classes.map(c => escapeHtml(c)).join(", ")}</div>
+                   <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">${t.assigned_subjects.map(s => escapeHtml(s)).join(", ") || "No subjects listed"}</div>`
+                : `<span style="color: var(--text-muted); font-style: italic;">No active classes</span>`;
+
+            // Support breakdown chips
+            const supportChips = t.assigned_learners_count > 0
+                ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.2rem;">
+                        ${t.targeted_support_count > 0 ? `<span class="support-chip chip-targeted" title="Requires targeted intervention">${t.targeted_support_count} Targeted</span>` : ""}
+                        ${t.monitoring_count > 0 ? `<span class="support-chip chip-monitoring" title="Requires monitoring">${t.monitoring_count} Monitoring</span>` : ""}
+                        ${t.on_track_count > 0 ? `<span class="support-chip chip-ontrack" title="On track">${t.on_track_count} On Track</span>` : ""}
+                        ${t.unassessed_learners_count > 0 ? `<span class="support-chip chip-unassessed" title="Pending initial evaluation">${t.unassessed_learners_count} Unassessed</span>` : ""}
+                    </div>
+                  `
+                : `<span style="color: var(--text-muted); font-size: 0.8rem;">—</span>`;
+
+            // Notifications
+            const notifMarkup = t.unread_notifications_count > 0
+                ? `<span style="font-weight: 600; color: ${t.high_priority_notifications_count > 0 ? 'var(--pastel-pink-text)' : 'var(--text-body)'};">
+                        ${t.unread_notifications_count} unread ${t.high_priority_notifications_count > 0 ? `<small style="display: block; font-size: 0.75rem; color: #b91c1c;">(${t.high_priority_notifications_count} High)</small>` : ""}
+                   </span>`
+                : `<span style="color: var(--text-muted); font-size: 0.82rem;">0 unread</span>`;
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: var(--text-heading);">${escapeHtml(t.teacher_name)}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(t.email_or_username)}</div>
+                    </td>
+                    <td>${classesMarkup}</td>
+                    <td style="text-align: center;">
+                        <span style="font-size: 1.05rem; font-weight: 800; color: var(--text-heading);">${t.assigned_learners_count}</span>
+                    </td>
+                    <td>${supportChips}</td>
+                    <td style="text-align: center;">${notifMarkup}</td>
+                    <td>
+                        <div class="badge-workload ${badgeClass}">
+                            <span>${statusIcon}</span>
+                            <span>${escapeHtml(t.workload_label)}</span>
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            Score: <strong>${t.workload_score.toFixed(1)}</strong>
+                        </div>
+                    </td>
+                    <td style="max-width: 320px;">
+                        <div style="font-size: 0.82rem; color: var(--text-body); line-height: 1.4;">
+                            ${escapeHtml(t.explanation)}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // Event listeners for Workload tab
+    document.getElementById("btn-refresh-workload")?.addEventListener("click", () => {
+        loadWorkload();
+    });
+
+    document.getElementById("workload-filter-status")?.addEventListener("change", () => {
+        if (workloadCache) {
+            renderWorkloadTable(workloadCache.teachers);
+        }
+    });
+
     // -------------------------------------------------------------------------
     // 9. Bootstrap Dashboard
     // -------------------------------------------------------------------------
@@ -462,5 +684,57 @@ document.addEventListener("DOMContentLoaded", () => {
     loadStudents();
     loadAssignments();
     loadParentLinks();
+    loadWorkload();
+
+    const field = (name, label, extra = {}) => ({name, label, ...extra});
+    const userFields = [field("full_name", "Full name", {maxLength:150}), field("email_or_username", "Username or email", {maxLength:150}),
+        field("role", "Role", {options:["ADMIN", "TEACHER", "PARENT"]}), field("phone_number", "Phone", {required:false,maxLength:30}),
+        field("password", "New password (leave blank to keep)", {type:"password",required:false})];
+    const studentFields = [field("admission_number", "Admission number", {maxLength:50}), field("first_name", "First name", {maxLength:100}),
+        field("last_name", "Last name", {maxLength:100}), field("date_of_birth", "Date of birth", {type:"date"}),
+        field("gender", "Gender", {required:false}), field("grade_level", "Grade", {maxLength:50}), field("stream", "Stream", {required:false,maxLength:50})];
+    async function refreshCrudTables() {await Promise.all([loadUsers(), loadStudents(), loadAssignments(), loadParentLinks(), loadStats()]);}
+    document.addEventListener("click", async event => {
+        const button = event.target.closest("[data-crud]");
+        if (!button) return;
+        const id = Number(button.dataset.id);
+        const action = button.dataset.crud;
+        try {
+            if (action === "toggle-user") {
+                const user = state.users.find(u => u.user_id === id);
+                if (!confirm(user.is_active ? "Deactivate this account? Existing sessions will be signed out; history is preserved." : "Restore this account?")) return;
+                await RecordEditor.request(`/admin/users/${id}${user.is_active ? "" : "/status"}`, user.is_active ? "DELETE" : "PATCH", user.is_active ? undefined : {is_active:true});
+                await refreshCrudTables(); return;
+            }
+            if (action === "toggle-student") {
+                const student = state.students.find(s => s.student_id === id);
+                if (!confirm(student.is_archived ? "Restore this learner?" : "Archive this learner? Classroom and parent access will be hidden; history is preserved.")) return;
+                await RecordEditor.request(`/admin/students/${id}${student.is_archived ? "/status" : ""}`, student.is_archived ? "PATCH" : "DELETE", student.is_archived ? {is_archived:false} : undefined);
+                await refreshCrudTables(); return;
+            }
+            let values, fields, path, title;
+            if (action === "edit-user") {values = state.users.find(u => u.user_id === id); fields = userFields; path = `/admin/users/${id}`; title = "Edit account";}
+            if (action === "edit-student") {values = state.students.find(s => s.student_id === id); fields = studentFields; path = `/admin/students/${id}`; title = "Edit learner";}
+            if (action === "edit-assignment") {
+                values = state.assignmentRows.find(a => a.assignment_id === id); path = `/admin/teacher-assignments/${id}`; title = "Edit teaching assignment";
+                fields = [field("teacher_user_id", "Teacher", {options:state.users.filter(u => u.role === "TEACHER" && u.is_active).map(u => ({value:u.user_id,label:u.full_name}))}),
+                    field("grade_level", "Grade"), field("stream", "Stream"), field("subject_name", "Subject")];
+            }
+            if (action === "edit-link") {
+                values = state.linkRows.find(l => l.id === id); path = `/admin/parent-links/${id}`; title = "Edit parent link";
+                fields = [field("parent_user_id", "Parent", {options:state.users.filter(u => u.role === "PARENT" && u.is_active).map(u => ({value:u.user_id,label:u.full_name}))}),
+                    field("student_id", "Learner", {options:state.students.filter(s => !s.is_archived).map(s => ({value:s.student_id,label:`${s.first_name} ${s.last_name} (${s.admission_number})`}))}),
+                    field("relationship_type", "Relationship", {options:["Mother", "Father", "Guardian", "Other"]})];
+            }
+            if (!values) return;
+            RecordEditor.open({title, fields, values, onSave:async payload => {
+                if (action === "edit-user") payload.password = payload.password || null;
+                if (action === "edit-student") {payload.stream ||= null; payload.gender ||= null;}
+                await RecordEditor.request(path, "PUT", payload);
+                if (action === "edit-user" && id === Auth.getUser().user_id && (payload.password || payload.role !== Auth.getUser().role)) {Auth.logout(); return;}
+                await refreshCrudTables(); showToast("Changes saved.", "success");
+            }});
+        } catch (error) {showToast(error.message, "error");}
+    });
 
 });

@@ -507,3 +507,103 @@ body {
 .btn-outline-purple:hover:not(:disabled) {
     background: var(--pastel-purple-bg);
 }
+
+
+/* ==========================================================================
+   Teacher Workload Balancer Component Styles
+   ========================================================================== */
+
+.badge-workload {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-workload.badge-high {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.badge-workload.badge-moderate {
+    background-color: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.badge-workload.badge-low {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-workload.badge-unassigned {
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.support-chip {
+    display: inline-block;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    margin-right: 0.3rem;
+    margin-bottom: 0.2rem;
+}
+
+.support-chip.chip-targeted {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.support-chip.chip-monitoring {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.support-chip.chip-ontrack {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.support-chip.chip-unassessed {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.balancing-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.95rem 1.15rem;
+    border-radius: var(--radius-sm);
+    background-color: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--pastel-purple-accent);
+}
+
+.balancing-card.prio-high {
+    border-left-color: #ef4444;
+    background-color: #fff5f5;
+}
+
+.balancing-card.prio-medium {
+    border-left-color: #f59e0b;
+    background-color: #fffdf5;
+}
+
+.balancing-card.prio-low {
+    border-left-color: #10b981;
+    background-color: #f6fdf9;
+}

@@ -875,3 +875,11 @@ body {
 textarea.form-control {
     font-family: inherit;
 }
+
+.class-selector-group { min-width: 0; max-width: 100%; }
+.class-select { min-width: 0; max-width: 100%; }
+@media (max-width: 600px) {
+    .navbar { padding: .85rem 1rem; }
+    .nav-user-info { flex-wrap: wrap; }
+    .toast-container { max-width: calc(100vw - 3rem); }
+}

@@ -1,0 +1,11 @@
+.record-editor-backdrop { position: fixed; inset: 0; z-index: 11000; background: #0f172a80; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.record-editor-card { background: white; width: 100%; max-width: 600px; max-height: 90vh; overflow: auto; padding: 1.5rem; border-radius: 14px; box-shadow: 0 20px 50px #0003; }
+#record-editor-fields { display: grid; gap: .8rem; margin: 1rem 0; }
+#record-editor-fields label { display: grid; gap: .3rem; font-weight: 600; }
+#record-editor-fields input, #record-editor-fields select, #record-editor-fields textarea { width: 100%; min-width: 0; padding: .65rem; font: inherit; border: 1px solid #cbd5e1; border-radius: 6px; }
+#record-editor-fields textarea { min-height: 6rem; }
+#record-editor-error { color: #b91c1c; }
+.record-editor-actions { display: flex; justify-content: end; gap: .6rem; margin-top: 1rem; }
+.record-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+.record-actions button { padding: .35rem .6rem; font: inherit; font-size: .8rem; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 5px; background: white; }
+.record-status { font-size: .75rem; color: #64748b; display: block; }

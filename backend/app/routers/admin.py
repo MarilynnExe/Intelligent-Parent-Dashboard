@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.lifecycle import UserLifecycle
 from app.services.lifecycle_service import archived, record_change, snapshot
+from app.routers.admin_crud import require_role_user
 from app.core.dependencies import require_role
 from app.core.security import hash_password
 from app.models.academic import Assessment
@@ -213,6 +214,7 @@ def create_teacher_assignment(
     if teacher.role != "TEACHER":
         raise HTTPException(status_code=400, detail="Specified user does not have TEACHER role.")
 
+    require_role_user(db, data.teacher_user_id, "TEACHER")
 
     # Check for duplicate assignment
     existing = db.query(TeacherAssignment).filter(
@@ -316,6 +318,7 @@ def link_parent_to_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
 
+    require_role_user(db, data.parent_user_id, "PARENT")
     from app.services.lifecycle_service import require_active_student
     require_active_student(db, student)
 

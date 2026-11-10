@@ -31,11 +31,24 @@ document.addEventListener("DOMContentLoaded", () => {
     let state = {
         children: [],
         activeChild: null,
+        requestId: 0,
+        loading: false,
     };
 
     // -------------------------------------------------------------------------
     // 3. UI Helpers: Toasts & Tab Navigation
     // -------------------------------------------------------------------------
+    
+    function escapeHtml(str) {
+        if (!str && str !== 0) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     function showToast(message, type = "info", duration = 4000) {
         const container = document.getElementById("toast-container");
         const toast = document.createElement("div");
@@ -45,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toast.innerHTML = `
             <span style="font-size: 1.1rem;">${icon}</span>
             <div style="flex: 1;">
-                <div style="font-size: 0.88rem; font-weight: 600;">${message}</div>
+                <div style="font-size: 0.88rem; font-weight: 600;">${escapeHtml(message)}</div>
             </div>
         `;
 
@@ -146,53 +159,117 @@ document.addEventListener("DOMContentLoaded", () => {
     // -------------------------------------------------------------------------
     // 5. Load Active Child's Analytics & Assessments
     // -------------------------------------------------------------------------
-    async function loadChildData(child) {
+    const initialPeriod = currentAcademicPeriod();
+    document.getElementById("parent-year").value = initialPeriod.academic_year;
+    document.getElementById("parent-term").value = initialPeriod.term;
+    function selectedPeriod() {
+        const yearInput = document.getElementById("parent-year");
+        if (!yearInput.reportValidity()) return null;
+        return {term: document.getElementById("parent-term").value, academic_year: yearInput.value};
+    }
+    function refreshChild(quiet = false) {
+        if (state.activeChild) loadChildData(state.activeChild, quiet);
+        else loadRegisteredChildren();
+    }
+    document.getElementById("parent-refresh").addEventListener("click", () => refreshChild());
+    ["parent-year", "parent-term"].forEach(id => document.getElementById(id).addEventListener("change", () => refreshChild()));
+    setInterval(() => {
+        if (!document.hidden && !state.loading && state.activeChild) refreshChild(true);
+    }, 30000);
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !state.loading && state.activeChild) refreshChild(true);
+    });
+
+    async function loadChildData(child, quiet = false) {
+        const period = selectedPeriod();
+        if (!period) return;
+        const requestId = ++state.requestId;
+        state.loading = true;
         const loading = document.getElementById("global-loading");
         const mainContent = document.getElementById("main-content");
-        const banner = document.getElementById("child-profile-banner");
-
-        loading.style.display = "block";
-        mainContent.style.display = "none";
-
-        // Update Child Profile Banner
+        const refreshStatus = document.getElementById("parent-refresh-status");
+        refreshStatus.textContent = "Refreshing…";
+        if (!quiet) {
+            loading.style.display = "block";
+            mainContent.style.display = "none";
+        }
         document.getElementById("child-full-name").textContent = `${child.first_name} ${child.last_name}`;
         document.getElementById("child-adm").textContent = `ADM: ${child.admission_number}`;
         document.getElementById("child-grade-stream").textContent = `Class: ${child.grade_level} ${child.stream || ''}`;
         document.getElementById("child-relation").textContent = `Relationship: ${child.relationship_type || 'Parent'}`;
-        banner.style.display = "flex";
-
+        document.getElementById("child-profile-banner").style.display = "flex";
+        const query = new URLSearchParams(period);
         try {
-            // Parallel fetch: Analytics and Assessments
-            const [analyticsRes, assessmentsRes] = await Promise.all([
-                apiFetch(`/analytics/student/${child.student_id}`),
-                apiFetch(`/parent/children/${child.student_id}/assessments`)
+            const [analyticsRes, progressRes] = await Promise.all([
+                apiFetch(`/analytics/student/${child.student_id}?${query}`),
+                apiFetch(`/parent/children/${child.student_id}/progress?${query}`),
             ]);
-
-            // Handle Analytics
-            if (analyticsRes.ok) {
-                const analytics = await analyticsRes.json();
-                renderAnalytics(analytics);
-            } else {
-                renderEmptyAnalytics();
+            if (requestId !== state.requestId) return;
+            if (!progressRes.ok) throw new Error("Unable to load learner progress. Please refresh to retry.");
+            if (!analyticsRes.ok && analyticsRes.status !== 404) throw new Error("Unable to load analytics. Please refresh to retry.");
+            const progress = await progressRes.json();
+            const analytics = analyticsRes.ok ? await analyticsRes.json() : null;
+            if (requestId !== state.requestId) return;
+            renderEmptyAnalytics();
+            const current = analytics && analytics.is_current && progress.freshness === "current"
+                && analytics.calculated_at === progress.calculated_at;
+            if (current) renderAnalytics(analytics);
+            const calculatedAt = progress.calculated_at;
+            const timestamp = calculatedAt ? new Date(calculatedAt.endsWith("Z") ? calculatedAt : calculatedAt + "Z").toLocaleString() : "Never";
+            document.getElementById("analytics-freshness").textContent =
+                `${period.term} ${period.academic_year} · Analytics: ${progress.freshness}. Last calculated: ${timestamp}. ` +
+                (progress.freshness === "current" ? "" : (progress.freshness_message || "Ask the teacher to retry calculation."));
+            if (!current) {
+                document.getElementById("hero-risk-probability").textContent = progress.freshness === "pending" ? "Pending" : "Unavailable";
+                document.getElementById("hero-risk-badge").textContent = "Calculation needed";
+                document.getElementById("badge-overall-status").textContent = "Calculation needed";
+                document.getElementById("parent-recommendations-list").textContent = progress.freshness_message || "Ask the teacher to recalculate for this period.";
             }
-
-            // Handle Assessments
-            if (assessmentsRes.ok) {
-                const assessments = await assessmentsRes.json();
-                renderAssessments(assessments);
-            } else {
-                renderEmptyAssessments();
-            }
-
-            loading.style.display = "none";
-            mainContent.style.display = "block";
-
+            document.getElementById("hero-period").textContent = `— ${period.term} ${period.academic_year}`;
+            document.getElementById("stat-average-label").textContent = `${period.term} Academic Average`;
+            document.getElementById("stat-academic-average").textContent = progress.overall_average == null ? "—" : `${progress.overall_average.toFixed(1)}%`;
+            renderAssessments(progress.assessments);
+            renderProgress(progress);
+            refreshStatus.textContent = `Updated ${new Date().toLocaleTimeString()}. Refreshes every 30 seconds.`;
         } catch (err) {
-            console.error("Child Data Error:", err);
-            loading.style.display = "none";
-            mainContent.style.display = "block";
-            showToast("Failed to load some learner metrics.", "error");
+            if (requestId !== state.requestId) return;
+            // Clear cached guidance: a failed refresh must never look like current information.
+            renderEmptyAnalytics();
+            renderEmptyAssessments();
+            document.getElementById("assessment-progress").textContent = "Progress unavailable. Refresh to retry.";
+            document.getElementById("attendance-summary").textContent = "Attendance unavailable.";
+            document.getElementById("attendance-trend").replaceChildren();
+            document.getElementById("analytics-freshness").textContent = "Could not verify freshness. Refresh to retry.";
+            refreshStatus.textContent = err.message;
+        } finally {
+            if (requestId === state.requestId) {
+                state.loading = false;
+                loading.style.display = "none";
+                mainContent.style.display = "block";
+            }
         }
+    }
+
+    function renderProgress(data) {
+        const totals = data.attendance_totals;
+        document.getElementById("stat-absences").textContent = `${totals.Absent} Days`;
+        document.getElementById("attendance-count-big").textContent = totals.Absent;
+        document.getElementById("attendance-summary").textContent = totals.recorded
+            ? `${totals.recorded} recorded days: ${totals.Present} present, ${totals.Absent} absent, ${totals.Late} late, ${totals.Excused} excused.`
+            : "No attendance records for this period.";
+        document.getElementById("attendance-trend").innerHTML = data.attendance_months.length
+            ? data.attendance_months.map(row => `<tr><td>${escapeHtml(row.month)}</td><td>${row.present}</td><td>${row.absent}</td><td>${row.late}</td><td>${row.excused}</td><td>${row.recorded}</td></tr>`).join("")
+            : '<tr><td colspan="6">No recorded attendance yet.</td></tr>';
+        const bySubject = new Map();
+        data.assessments.forEach(item => {
+            if (!bySubject.has(item.subject_name)) bySubject.set(item.subject_name, []);
+            bySubject.get(item.subject_name).push(item);
+        });
+        const chart = document.getElementById("assessment-progress");
+        chart.innerHTML = [...bySubject].map(([subject, items]) => `<div class="progress-subject"><h4>${escapeHtml(subject)}</h4>${items.map(item => `
+            <div class="score-observation"><span>${escapeHtml(item.assessment_date)} · ${escapeHtml(item.assessment_type)}</span>
+            <meter min="0" max="100" value="${item.percentage}" aria-label="${escapeHtml(subject)} ${escapeHtml(item.assessment_date)}">${item.percentage}%</meter>
+            <strong>${item.percentage.toFixed(1)}%</strong></div>`).join("")}</div>`).join("") || "No assessments for this period.";
     }
 
     // -------------------------------------------------------------------------
@@ -269,7 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
             recList.innerHTML = `
                 <div class="rec-item" style="background: var(--pastel-green-bg); border-color: var(--pastel-green-border);">
                     <p style="color: var(--pastel-green-text); font-weight: 600;">
-                        🌟 Your child is performing commendably on track. Continue positive reinforcement and encourage daily curiosity!
+                        No additional intervention recommendations were generated for this period.
                     </p>
                 </div>
             `;
@@ -278,14 +355,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
         data.recommendations.forEach(rec => {
             const priorityClass = rec.priority === "High" ? "high" : (rec.priority === "Medium" ? "medium" : "low");
+            const lp = rec.learning_path;
+
+            let alignmentBadgeHtml = "";
+            let lpDetailsHtml = "";
+
+            if (lp) {
+                if (lp.alignment_type === "CURRICULUM_ALIGNED") {
+                    alignmentBadgeHtml = `<span class="alignment-pill pill-curriculum" title="${escapeHtml(lp.alignment_source || 'KICD Junior Secondary Curriculum')}">✓ CBC Curriculum Aligned</span>`;
+                } else {
+                    alignmentBadgeHtml = `<span class="alignment-pill pill-provisional" title="${escapeHtml(lp.alignment_source || 'Provisional Learning Support')}">ℹ️ Provisional Learning Support</span>`;
+                }
+
+                lpDetailsHtml = `
+                    <div class="lp-detail-container">
+                        <div class="lp-topic">🎯 <strong>Learning Area & Skill:</strong> ${escapeHtml(lp.subject_name)} — <em>${escapeHtml(lp.topic_competency)}</em></div>
+                        <div class="lp-reason">💡 <strong>Why this was suggested:</strong> ${escapeHtml(lp.reason)}</div>
+                        <div class="lp-activity-box">
+                            <div class="lp-activity-title">📌 <strong>Learning Activity:</strong> ${escapeHtml(lp.activity_title)}</div>
+                            <div class="lp-activity-desc">${escapeHtml(lp.activity_description)}</div>
+                            ${lp.suggested_duration ? `<div class="lp-duration">⏱️ <strong>Frequency / Duration:</strong> ${escapeHtml(lp.suggested_duration)}</div>` : ''}
+                        </div>
+                        <div class="lp-resource-box">
+                            <div class="lp-resource-header">
+                                <span>📖 <strong>Resource:</strong> ${escapeHtml(lp.resource_title)}</span>
+                                ${lp.resource_url ? `<a href="${escapeHtml(lp.resource_url)}" target="_blank" rel="noopener noreferrer" class="btn-resource-link">🔗 Open Resource ↗</a>` : ''}
+                            </div>
+                            ${lp.resource_description ? `<div class="lp-resource-desc">${escapeHtml(lp.resource_description)}</div>` : ''}
+                        </div>
+                        ${lp.recommended_next_step ? `<div class="lp-next-step">🚀 <strong>Recommended Next Step:</strong> ${escapeHtml(lp.recommended_next_step)}</div>` : ''}
+                    </div>
+                `;
+            }
+
             const div = document.createElement("div");
             div.className = "rec-item";
             div.innerHTML = `
                 <div class="rec-item-header">
-                    <span class="rec-priority ${priorityClass}">Priority: ${rec.priority}</span>
-                    <span class="rec-target-badge">For: ${rec.target_audience}</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <span class="rec-priority ${priorityClass}">Priority: ${rec.priority}</span>
+                        <span class="rec-target-badge">For: ${rec.target_audience}</span>
+                    </div>
+                    ${alignmentBadgeHtml}
                 </div>
-                <div class="rec-body">${rec.recommendation_text}</div>
+                <div class="rec-body">${escapeHtml(rec.recommendation_text)}</div>
+                ${lpDetailsHtml}
             `;
             recList.appendChild(div);
         });
@@ -303,14 +417,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("stat-academic-average").textContent = "—";
         document.getElementById("stat-cohort-percentile").textContent = "—";
         document.getElementById("stat-cohort-desc").textContent = "Calculated after first term CATs";
-        document.getElementById("stat-absences").textContent = "0 Days";
-        document.getElementById("attendance-count-big").textContent = "0";
+        document.getElementById("stat-absences").textContent = "—";
+        document.getElementById("attendance-count-big").textContent = "—";
 
         const recList = document.getElementById("parent-recommendations-list");
         recList.innerHTML = `
             <div class="rec-item" style="background: #f8fafc;">
                 <p style="color: var(--text-muted);">
-                    Formative academic assessments are currently being collected by teachers. Early intervention analytics and recommendations will appear once Period 1 evaluations are finalized.
+                    Analytics are not available for this period. Ask the teacher to record assessments and retry calculation.
                 </p>
             </div>
         `;
@@ -332,9 +446,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const isDeficient = item.percentage < 50;
 
             tr.innerHTML = `
-                <td style="font-weight: 700; color: var(--text-heading);">${item.subject_name}</td>
-                <td><span style="font-size: 0.85rem;">${item.assessment_type}</span></td>
-                <td><span style="font-size: 0.85rem;">${item.term} ${item.academic_year}</span></td>
+                <td style="font-weight: 700; color: var(--text-heading);">${escapeHtml(item.subject_name)}</td>
+                <td><span style="font-size: 0.85rem;">${escapeHtml(item.assessment_type)}</span></td>
+                <td><span style="font-size: 0.85rem;">${escapeHtml(item.term)} ${escapeHtml(item.academic_year)}</span></td>
                 <td>${item.score} / ${item.max_score}</td>
                 <td>
                     <strong style="color: ${isDeficient ? 'var(--pastel-pink-text)' : 'var(--pastel-purple-text)'};">

@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import Base, engine
 from app import models  # noqa: F401  (registers every table with Base)
+from app.routers.admin_crud import router as admin_crud_router
 from app.routers.auth import router as auth_router
 from app.routers.teacher import router as teacher_router
+from app.routers.teacher_crud import router as teacher_crud_router
 from app.routers.analytics import router as analytics_router
 from app.routers.parent import router as parent_router
 from app.routers.admin import router as admin_router
@@ -42,6 +44,7 @@ app.include_router(
     prefix="/api"
 )
 
+app.include_router(teacher_crud_router, prefix="/api")
 
 app.include_router(
     teacher_router,
@@ -58,6 +61,7 @@ app.include_router(
     prefix="/api"
 )
 
+app.include_router(admin_crud_router, prefix="/api")
 
 app.include_router(
     admin_router,

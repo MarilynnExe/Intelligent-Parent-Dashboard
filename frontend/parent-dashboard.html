@@ -8,6 +8,7 @@
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/parent-dashboard.css">
+    <link rel="stylesheet" href="css/notifications.css">
 </head>
 
 <body>
@@ -25,6 +26,10 @@
         <div class="nav-user-info">
             <span id="user-display-name">Loading parent profile...</span>
             <span class="role-badge parent-badge">Parent</span>
+            <button id="nav-notifications-btn" class="nav-bell-btn" title="View Notifications" aria-label="Notifications">
+                <span class="bell-icon">🔔</span>
+                <span id="notification-badge" class="nav-badge-pill hidden">0</span>
+            </button>
             <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout</button>
         </div>
     </header>
@@ -62,6 +67,13 @@
         </div>
 
         <!-- Child Profile Hero Banner -->
+        <div class="period-toolbar">
+            <label for="parent-year">Academic year <input id="parent-year" type="number" min="1900" max="9999" required></label>
+            <label for="parent-term">Term <select id="parent-term"><option>Term 1</option><option>Term 2</option><option>Term 3</option></select></label>
+            <button id="parent-refresh" class="btn btn-primary" type="button">Refresh progress</button>
+            <span id="parent-refresh-status" role="status" aria-live="polite"></span>
+        </div>
+        <p id="analytics-freshness" class="freshness-note" role="status" aria-live="polite"></p>
         <div id="child-profile-banner" class="child-profile-banner" style="display: none;">
             <div style="display: flex; align-items: center; gap: 1.25rem;">
                 <div class="child-avatar">🎓</div>
@@ -124,7 +136,7 @@
                     <!-- Transparent Advisory Notice -->
                     <div class="parent-advisory-box">
                         <strong>ℹ️ Transparent Guidance for Parents:</strong>
-                        This calculated support probability is an empirical early-warning indicator derived from this term's indicators (assessment scores, class peer comparisons, and attendance). It is designed to foster collaborative support between parents and educators, and is <em>not a final verdict on academic capability</em>.
+                        This prototype uses a model trained on the Portuguese UCI Student Performance dataset to estimate benchmark academic-failure risk from assessment average, cohort percentile and absences. Shown here as an advisory support indicator, it has not been validated for Kenyan schools or behavioural prediction. Behaviour guidance comes from separate expert rules.
                     </div>
                 </div>
 
@@ -169,6 +181,11 @@
             <!-- TAB 2: ACADEMIC PERFORMANCE & PERCENTILES                     -->
             <!-- ============================================================= -->
             <section id="section-academics" class="content-section">
+                <div class="section-card">
+                    <h3>Assessment progress over time</h3>
+                    <p>Recorded scores by subject and date in the selected period; these are observations, not predictions.</p>
+                    <div id="assessment-progress" class="progress-series"></div>
+                </div>
 
                 <!-- Assessments Table Card -->
                 <div class="section-card">
@@ -211,7 +228,7 @@
                         </div>
                     </div>
                     <p style="font-size: 0.92rem; line-height: 1.6; color: var(--text-body);">
-                        The cohort percentile indicates your child’s relative standing among all peers in the same grade level and stream based on Period 1 assessments. Using the standard statistical midpoint rank formula, a percentile of <strong>70th</strong> means your child performed as well as or higher than 70% of learners in their class cohort. Percentiles provide contextual insight beyond raw percentages.
+                        The cohort percentile indicates your child’s relative standing among all peers in the same grade level and stream based on assessments in the selected term. Using the standard statistical midpoint rank formula, a percentile of <strong>70th</strong> means your child performed as well as or higher than 70% of learners in their class cohort. Percentiles provide contextual insight beyond raw percentages.
                     </p>
                 </div>
 
@@ -221,6 +238,15 @@
             <!-- TAB 3: ATTENDANCE & HABITS                                    -->
             <!-- ============================================================= -->
             <section id="section-attendance" class="content-section">
+                <div class="section-card">
+                    <h3>Recorded attendance</h3>
+                    <p id="attendance-summary"></p>
+                    <p>Totals cover recorded days only. Unrecorded days are not treated as present or absent.</p>
+                    <div class="table-responsive"><table class="data-table">
+                        <thead><tr><th>Month</th><th>Present</th><th>Absent</th><th>Late</th><th>Excused</th><th>Recorded</th></tr></thead>
+                        <tbody id="attendance-trend"></tbody>
+                    </table></div>
+                </div>
 
                 <div class="section-card">
                     <div class="section-header">
@@ -256,11 +282,108 @@
 
             </section>
 
+
         </div>
+
+
 
     </main>
 
+    <!-- Notifications Drawer Backdrop -->
+    <div id="notif-backdrop" class="notif-backdrop"></div>
+
+    <!-- Notifications Slide-over Drawer -->
+    <aside id="notif-drawer" class="notif-drawer">
+        <div class="notif-drawer-header">
+            <div class="notif-drawer-title">
+                <span>🔔</span>
+                <span>In-App Notifications</span>
+            </div>
+            <div class="notif-drawer-actions">
+                <button id="btn-notif-prefs" class="notif-icon-action-btn" title="Communication Preferences" aria-label="Preferences">
+                    ⚙️
+                </button>
+                <button id="btn-close-notif-drawer" class="notif-icon-action-btn" title="Close" aria-label="Close">
+                    ✕
+                </button>
+            </div>
+        </div>
+
+        <div class="notif-drawer-subbar">
+            <div class="notif-tabs">
+                <button id="notif-tab-all" class="notif-tab-btn active">All</button>
+                <button id="notif-tab-unread" class="notif-tab-btn">Unread</button>
+            </div>
+            <button id="btn-mark-all-read" class="notif-mark-all-btn">Mark all as read</button>
+        </div>
+
+        <div id="notif-list-container" class="notif-drawer-body">
+            <!-- Populated dynamically -->
+        </div>
+    </aside>
+
+    <!-- Communication Preferences Modal -->
+    <div id="notif-prefs-modal" class="notif-modal-backdrop">
+        <div class="notif-modal-card">
+            <div class="notif-modal-header">
+                <h3>⚙️ Communication Preferences</h3>
+                <button id="btn-close-prefs-modal" class="notif-icon-action-btn">✕</button>
+            </div>
+            <form id="notif-prefs-form">
+                <div class="notif-modal-body">
+                    <div class="pref-group">
+                        <div class="pref-toggle-row">
+                            <label for="pref-notifications-enabled">
+                                🔔 Enable In-App Notifications
+                            </label>
+                            <input type="checkbox" id="pref-notifications-enabled" class="pref-checkbox">
+                        </div>
+                        <p class="pref-label-desc">Master switch for portal notification alerts.</p>
+                    </div>
+
+                    <div class="pref-group">
+                        <div class="pref-label-title">Notification Categories</div>
+                        <p class="pref-label-desc">Choose which optional updates you receive (High-priority support advisories are always delivered).</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
+                            <div class="pref-toggle-row">
+                                <label for="pref-academic-updates">📚 Academic Performance</label>
+                                <input type="checkbox" id="pref-academic-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-attendance-updates">📅 Attendance Alerts</label>
+                                <input type="checkbox" id="pref-attendance-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-behaviour-updates">🗒️ Behaviour & Notes</label>
+                                <input type="checkbox" id="pref-behaviour-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-support-updates">🎯 Learning Support (Targeted)</label>
+                                <input type="checkbox" id="pref-support-updates" class="pref-checkbox">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pref-group">
+                        <label class="pref-label-title" for="pref-comm-style">Message Detail Level</label>
+                        <select id="pref-comm-style" class="pref-select">
+                            <option value="DETAILED">Detailed — In-depth pedagogical context (Recommended)</option>
+                            <option value="CONCISE">Concise — Short bullet summaries</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="notif-modal-footer">
+                    <button type="button" id="btn-cancel-prefs" class="btn btn-outline-danger btn-sm">Cancel</button>
+                    <button type="submit" id="btn-save-prefs" class="btn btn-primary btn-sm" style="background-color: var(--pastel-pink-accent, #ec4899); color: white;">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="JS/api.js"></script>
+    <script src="JS/notifications.js"></script>
     <script src="JS/parent-dashboard.js"></script>
 
 </body>

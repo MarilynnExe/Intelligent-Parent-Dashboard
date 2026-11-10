@@ -8,6 +8,8 @@
 
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/teacher-dashboard.css">
+    <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/record-editor.css">
 </head>
 
 <body>
@@ -25,6 +27,10 @@
         <div class="nav-user-info">
             <span id="user-display-name">Loading teacher...</span>
             <span class="role-badge teacher-badge">Teacher</span>
+            <button id="nav-notifications-btn" class="nav-bell-btn" title="View Notifications" aria-label="Notifications">
+                <span class="bell-icon">🔔</span>
+                <span id="notification-badge" class="nav-badge-pill hidden">0</span>
+            </button>
             <button id="logout-btn" class="btn btn-outline-danger btn-sm">Logout</button>
         </div>
     </header>
@@ -250,7 +256,8 @@
                                 <th>Term</th>
                                 <th>Score</th>
                                 <th>Percentage</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="recent-assessments-tbody">
                             <tr>
@@ -283,11 +290,13 @@
                         <label for="attendance-date" style="font-weight: 700; font-size: 0.9rem;">Register Date:</label>
                         <input id="attendance-date" class="form-control" type="date" style="padding: 0.4rem 0.75rem;">
                     </div>
+                    <button type="button" id="btn-load-register" class="btn btn-blue btn-sm">Load saved register</button>
                     <button type="button" id="btn-mark-all-present" class="btn btn-blue btn-sm">
                         ✅ Mark All as Present
                     </button>
                 </div>
 
+                <p id="register-status" role="status">Loading the saved register…</p>
                 <div class="table-responsive" style="margin-bottom: 1.5rem;">
                     <table class="data-table">
                         <thead>
@@ -297,7 +306,8 @@
                                 <th>Learner Name</th>
                                 <th>Attendance Status</th>
                                 <th>Teacher Remarks (Optional)</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="attendance-tbody">
                             <tr>
@@ -405,7 +415,8 @@
                                 <th>Category</th>
                                 <th>Rating</th>
                                 <th>Note</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="behaviour-tbody">
                             <tr><td colspan="4" class="state-box"><p>Select a learner to view behaviour ratings.</p></td></tr>
@@ -420,7 +431,8 @@
                                 <th>Date</th>
                                 <th>Term</th>
                                 <th>Observation</th>
-                            </tr>
+                                <th>Actions</th>
+                                </tr>
                         </thead>
                         <tbody id="observations-tbody">
                             <tr><td colspan="3" class="state-box"><p>Select a learner to view observations.</p></td></tr>
@@ -430,6 +442,9 @@
             </div>
 
         </section>
+
+
+
 
     </main>
 
@@ -466,6 +481,7 @@
                 </div>
 
                 <!-- Analytics Details View -->
+                <p id="teacher-analytics-freshness" role="status"></p>
                 <div id="modal-content" style="display: none;">
 
                     <!-- Hero Risk Display -->
@@ -486,7 +502,7 @@
 
                         <!-- Advisory Notice Disclaimer -->
                         <div class="advisory-box">
-                            <strong>⚠️ Advisory Notice:</strong> This calibrated support probability is an empirical early-warning indicator derived from the selected term's indicators (term performance, cohort percentile rank, and attendance). It is designed to assist educators and parents in structuring early interventions and is <em>not a definitive prediction of academic failure</em>.
+                            <strong>⚠️ Advisory Notice:</strong> This prototype estimates benchmark academic-failure risk using a model trained on the Portuguese UCI Student Performance dataset. Inputs are assessment average, cohort percentile and absences. The advisory support indicator has not been validated for Kenyan schools or behavioural prediction. Behaviour guidance uses separate expert rules.
                         </div>
                     </div>
 
@@ -536,7 +552,102 @@
     </div>
 
     <script src="JS/api.js"></script>
+    <script src="JS/notifications.js"></script>
+    <script src="JS/record-editor.js"></script>
     <script src="JS/teacher-dashboard.js"></script>
+
+    <!-- Notifications Drawer Backdrop -->
+    <div id="notif-backdrop" class="notif-backdrop"></div>
+
+    <!-- Notifications Slide-over Drawer -->
+    <aside id="notif-drawer" class="notif-drawer">
+        <div class="notif-drawer-header">
+            <div class="notif-drawer-title">
+                <span>🔔</span>
+                <span>In-App Notifications</span>
+            </div>
+            <div class="notif-drawer-actions">
+                <button id="btn-notif-prefs" class="notif-icon-action-btn" title="Communication Preferences" aria-label="Preferences">
+                    ⚙️
+                </button>
+                <button id="btn-close-notif-drawer" class="notif-icon-action-btn" title="Close" aria-label="Close">
+                    ✕
+                </button>
+            </div>
+        </div>
+
+        <div class="notif-drawer-subbar">
+            <div class="notif-tabs">
+                <button id="notif-tab-all" class="notif-tab-btn active">All</button>
+                <button id="notif-tab-unread" class="notif-tab-btn">Unread</button>
+            </div>
+            <button id="btn-mark-all-read" class="notif-mark-all-btn">Mark all as read</button>
+        </div>
+
+        <div id="notif-list-container" class="notif-drawer-body">
+            <!-- Populated dynamically -->
+        </div>
+    </aside>
+
+    <!-- Communication Preferences Modal -->
+    <div id="notif-prefs-modal" class="notif-modal-backdrop">
+        <div class="notif-modal-card">
+            <div class="notif-modal-header">
+                <h3>⚙️ Communication Preferences</h3>
+                <button id="btn-close-prefs-modal" class="notif-icon-action-btn">✕</button>
+            </div>
+            <form id="notif-prefs-form">
+                <div class="notif-modal-body">
+                    <div class="pref-group">
+                        <div class="pref-toggle-row">
+                            <label for="pref-notifications-enabled">
+                                🔔 Enable In-App Notifications
+                            </label>
+                            <input type="checkbox" id="pref-notifications-enabled" class="pref-checkbox">
+                        </div>
+                        <p class="pref-label-desc">Master switch for portal notification alerts.</p>
+                    </div>
+
+                    <div class="pref-group">
+                        <div class="pref-label-title">Notification Categories</div>
+                        <p class="pref-label-desc">Choose which optional updates you receive (High-priority support advisories are always delivered).</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.25rem;">
+                            <div class="pref-toggle-row">
+                                <label for="pref-academic-updates">📚 Academic Performance</label>
+                                <input type="checkbox" id="pref-academic-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-attendance-updates">📅 Attendance Alerts</label>
+                                <input type="checkbox" id="pref-attendance-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-behaviour-updates">🗒️ Behaviour & Notes</label>
+                                <input type="checkbox" id="pref-behaviour-updates" class="pref-checkbox">
+                            </div>
+                            <div class="pref-toggle-row">
+                                <label for="pref-support-updates">🎯 Learning Support (Targeted)</label>
+                                <input type="checkbox" id="pref-support-updates" class="pref-checkbox">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pref-group">
+                        <label class="pref-label-title" for="pref-comm-style">Message Detail Level</label>
+                        <select id="pref-comm-style" class="pref-select">
+                            <option value="DETAILED">Detailed — In-depth pedagogical context (Recommended)</option>
+                            <option value="CONCISE">Concise — Short bullet summaries</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="notif-modal-footer">
+                    <button type="button" id="btn-cancel-prefs" class="btn btn-outline-danger btn-sm">Cancel</button>
+                    <button type="submit" id="btn-save-prefs" class="btn btn-primary btn-sm" style="background-color: var(--pastel-purple-accent, #8b5cf6); color: white;">Save Preferences</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 </body>
 
