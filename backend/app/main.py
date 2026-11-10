@@ -10,6 +10,7 @@ from app.routers.teacher import router as teacher_router
 from app.routers.analytics import router as analytics_router
 from app.routers.parent import router as parent_router
 from app.routers.admin import router as admin_router
+from app.routers.notifications import router as notifications_router
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +36,12 @@ app.add_middleware(
 )
 
 
+
 app.include_router(
     auth_router,
     prefix="/api"
 )
+
 
 app.include_router(
     teacher_router,
@@ -55,8 +58,14 @@ app.include_router(
     prefix="/api"
 )
 
+
 app.include_router(
     admin_router,
+    prefix="/api"
+)
+
+app.include_router(
+    notifications_router,
     prefix="/api"
 )
 
@@ -73,6 +82,7 @@ def health_check():
     return {
         "status": "healthy"
     }
+
 
 # Serve the existing buildless frontend with correct case-sensitive asset paths.
 from pathlib import Path

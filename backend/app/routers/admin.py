@@ -17,6 +17,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.lifecycle import UserLifecycle
+from app.services.lifecycle_service import archived, record_change, snapshot
 from app.core.dependencies import require_role
 from app.core.security import hash_password
 from app.models.academic import Assessment
@@ -34,6 +36,8 @@ from app.schemas.admin import (
     UserCreate,
     UserOut,
 )
+from app.schemas.workload import TeacherWorkloadItem, TeacherWorkloadReportOut
+from app.services.workload_service import WorkloadService
 
 router = APIRouter(
     prefix="/admin",
@@ -78,7 +82,9 @@ def list_users(
     current_user: User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db),
 ):
-    return db.query(User).order_by(User.user_id.asc()).all()
+    rows = db.query(User).order_by(User.user_id.asc()).all()
+    states = {row.user_id: row.is_active for row in db.query(UserLifecycle).all()}
+    return [UserOut.model_validate(row).model_copy(update={"is_active": states.get(row.user_id, True)}) for row in rows]
 
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -129,7 +135,8 @@ def list_students(
     current_user: User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db),
 ):
-    return db.query(Student).order_by(Student.grade_level, Student.last_name).all()
+    rows = db.query(Student).order_by(Student.grade_level, Student.last_name).all()
+    return [StudentOut.model_validate(row).model_copy(update={"is_archived": archived(db, row.student_id)}) for row in rows]
 
 
 @router.post("/students", response_model=StudentOut, status_code=status.HTTP_201_CREATED)
@@ -157,6 +164,8 @@ def enroll_student(
     )
 
     db.add(student)
+    db.flush()
+
     db.commit()
     db.refresh(student)
 
@@ -204,6 +213,7 @@ def create_teacher_assignment(
     if teacher.role != "TEACHER":
         raise HTTPException(status_code=400, detail="Specified user does not have TEACHER role.")
 
+
     # Check for duplicate assignment
     existing = db.query(TeacherAssignment).filter(
         TeacherAssignment.teacher_user_id == data.teacher_user_id,
@@ -244,6 +254,7 @@ def delete_teacher_assignment(
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found.")
 
+    record_change(db, current_user, assignment, "delete", snapshot(assignment))
     db.delete(assignment)
     db.commit()
     return {"message": f"Teacher assignment {assignment_id} successfully deleted."}
@@ -264,7 +275,8 @@ def list_parent_links(
             ParentStudent.parent_user_id,
             User.full_name.label("parent_name"),
             ParentStudent.student_id,
-            func.concat(Student.first_name, " ", Student.last_name).label("student_name"),
+            Student.first_name.label("student_first_name"),
+            Student.last_name.label("student_last_name"),
             Student.admission_number,
             ParentStudent.relationship_type,
         )
@@ -280,7 +292,7 @@ def list_parent_links(
             parent_user_id=r.parent_user_id,
             parent_name=r.parent_name,
             student_id=r.student_id,
-            student_name=r.student_name,
+            student_name=f"{r.student_first_name} {r.student_last_name}",
             admission_number=r.admission_number,
             relationship_type=r.relationship_type,
         )
@@ -303,6 +315,9 @@ def link_parent_to_student(
     student = db.query(Student).filter(Student.student_id == data.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
+
+    from app.services.lifecycle_service import require_active_student
+    require_active_student(db, student)
 
     # Check for duplicate link
     existing = db.query(ParentStudent).filter(
@@ -342,6 +357,43 @@ def delete_parent_link(
     if not link:
         raise HTTPException(status_code=404, detail="Parent-student link not found.")
 
+    record_change(db, current_user, link, "delete", snapshot(link))
     db.delete(link)
     db.commit()
     return {"message": f"Parent-student link {link_id} successfully removed."}
+
+
+# -----------------------------------------------------------------------------
+# 6. Teacher Workload Monitoring & Balancing
+# -----------------------------------------------------------------------------
+
+@router.get("/teacher-workload", response_model=TeacherWorkloadReportOut)
+def get_teacher_workload_report(
+    current_user: User = Depends(require_role(["ADMIN"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns an administrator-level teacher workload comparison report,
+    including individual workload metrics, capacity classifications,
+    and administrative balancing recommendations.
+    """
+    return WorkloadService.get_all_teachers_workload_report(db)
+
+
+@router.get("/teacher-workload/{teacher_id}", response_model=TeacherWorkloadItem)
+def get_single_teacher_workload(
+    teacher_id: int,
+    current_user: User = Depends(require_role(["ADMIN"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns detailed workload metrics for a specific teacher.
+    """
+    teacher = db.query(User).filter(User.user_id == teacher_id, User.role == "TEACHER").first()
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Teacher with user ID {teacher_id} not found.",
+        )
+    return WorkloadService.calculate_teacher_workload(db, teacher)
+

@@ -8,6 +8,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
+from app.models.lifecycle import UserLifecycle
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -42,6 +43,10 @@ def login(
             detail="Invalid username or password"
         )
 
+    lifecycle = db.get(UserLifecycle, user.user_id)
+    if lifecycle and not lifecycle.is_active:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
     if not verify_password(
         login_data.password,
         user.password_hash
@@ -54,7 +59,8 @@ def login(
     token = create_access_token(
         user_id=user.user_id,
         email_or_username=user.email_or_username,
-        role=user.role
+        role=user.role,
+        token_version=lifecycle.token_version if lifecycle else 0
     )
 
     return {

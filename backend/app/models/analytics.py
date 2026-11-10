@@ -106,3 +106,13 @@ class Recommendation(Base):
         nullable=False,
         default="Active"
     )
+
+class AnalyticsFreshness(Base):
+    """Additive table: existing installations need no changes to analytics columns."""
+    __tablename__ = "analytics_freshness"
+    student_id = Column(Integer, ForeignKey("students.student_id"), primary_key=True)
+    term = Column(String(20), primary_key=True)
+    academic_year = Column(String(20), primary_key=True)
+    state = Column(String(20), nullable=False, default="stale")
+    message = Column(String(500), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)

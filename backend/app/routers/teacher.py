@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services.lifecycle_service import active_students, snapshot, record_change
 from app.core.dependencies import require_role
 
 from app.models.user import User
@@ -38,6 +39,9 @@ from app.schemas.behaviour import (
     TeacherObservationCreate,
     TeacherObservationOut
 )
+
+from app.core.academic_calendar import term_for_date, term_date_range
+from app.services.analytics_service import cohort_students, invalidate, refresh_students
 
 router = APIRouter(
     prefix="/teacher",
@@ -116,7 +120,7 @@ def get_assigned_students(
         )
 
     students = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(
             Student.grade_level == grade_level,
             Student.stream == stream
@@ -160,7 +164,7 @@ def record_assessment(
     db: Session = Depends(get_db)
 ):
     student = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(
             Student.student_id == data.student_id
         )
@@ -230,10 +234,19 @@ def record_assessment(
         recorded_by_teacher_id=current_user.user_id
     )
 
+    try:
+        term_date_range(data.term, data.academic_year)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    affected = cohort_students(db, student)
     db.add(assessment)
+    invalidate(db, affected, data.term, data.academic_year)
     db.commit()
     db.refresh(assessment)
 
+    results = refresh_students(db, affected, data.term, data.academic_year)
+    assessment.analytics_refresh = {"students": results,
+        "status": "current" if all(r["status"] == "current" for r in results.values()) else "incomplete"}
     return assessment
 
 @router.get(
@@ -250,7 +263,7 @@ def get_student_assessments(
     db: Session = Depends(get_db)
 ):
     student = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(Student.student_id == student_id)
         .first()
     )
@@ -305,11 +318,12 @@ def record_bulk_attendance(
 ):
     updated = 0
     skipped = []
+    affected = []
 
     for item in data.entries:
 
         student = (
-            db.query(Student)
+            db.query(Student).filter(active_students())
             .filter(
                 Student.student_id
                 == item.student_id
@@ -354,11 +368,13 @@ def record_bulk_attendance(
         )
 
         if existing:
+            before = snapshot(existing)
             existing.status = item.status
             existing.remarks = item.remarks
             existing.recorded_by_teacher_id = (
                 current_user.user_id
             )
+            record_change(db, current_user, existing, "update", before)
         else:
             attendance = Attendance(
                 student_id=item.student_id,
@@ -372,11 +388,16 @@ def record_bulk_attendance(
 
             db.add(attendance)
 
+        affected.append(student)
         updated += 1
 
+    term, year = term_for_date(data.record_date)
+    invalidate(db, affected, term, year)
     db.commit()
+    results = refresh_students(db, affected, term, year)
 
     return {
+        "analytics_refresh": results,
         "message": (
             f"Attendance updated for "
             f"{updated} learners."
@@ -397,7 +418,7 @@ def record_behaviour(
     db: Session = Depends(get_db)
 ):
     student = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(
             Student.student_id == data.student_id
         )
@@ -443,13 +464,16 @@ def record_behaviour(
         recorded_by_teacher_id=current_user.user_id
     )
 
+    term, year = term_for_date(record.record_date)
     db.add(record)
+    invalidate(db, [student], term, year)
     db.commit()
     db.refresh(record)
 
     return {
         "message": "Behaviour record saved successfully.",
-        "record_id": record.record_id
+        "record_id": record.record_id,
+        "analytics_refresh": refresh_students(db, [student], term, year)
     }
 
 @router.post("/observations")
@@ -463,7 +487,7 @@ def add_teacher_observation(
     db: Session = Depends(get_db)
 ):
     student = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(
             Student.student_id == data.student_id
         )
@@ -525,7 +549,7 @@ def get_taught_student(
 ) -> Student:
     """Return the student, or raise 404/403 if missing or outside the teacher's classes."""
     student = (
-        db.query(Student)
+        db.query(Student).filter(active_students())
         .filter(Student.student_id == student_id)
         .first()
     )

@@ -8,6 +8,7 @@ from app.models.academic import (
     CohortPercentile,
 )
 from app.models.student import Student
+from app.services.lifecycle_service import active_students
 
 
 class PercentileService:
@@ -27,6 +28,7 @@ class PercentileService:
                 func.avg(Assessment.percentage).label("average_score"),
             )
             .join(Student, Assessment.student_id == Student.student_id)
+            .filter(active_students())
             .filter(
                 Student.grade_level == grade_level,
                 Student.stream == stream,
@@ -103,14 +105,14 @@ class PercentileService:
                 func.avg(Assessment.percentage).label("average_score"),
             )
             .join(Student, Assessment.student_id == Student.student_id)
+            .filter(active_students())
             .filter(
                 Student.grade_level == grade_level,
                 Assessment.term == term,
                 Assessment.academic_year == academic_year,
             )
         )
-        if stream:
-            query = query.filter(Student.stream == stream)
+        query = query.filter(Student.stream == stream)
 
         student_scores = query.group_by(Assessment.student_id).all()
 

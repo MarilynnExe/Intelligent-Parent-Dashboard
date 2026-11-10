@@ -28,16 +28,18 @@ def verify_password(
     hashed_password: str
 ) -> bool:
 
-    return bcrypt.checkpw(
-        plain_password.encode("utf-8"),
-        hashed_password.encode("utf-8")
-    )
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        # bcrypt rejects overlong UTF-8 passwords; invalid credentials must not crash login.
+        return False
 
 
 def create_access_token(
     user_id: int,
     email_or_username: str,
-    role: str
+    role: str,
+    token_version: int = 0
 ) -> str:
 
     expiration = datetime.now(timezone.utc) + timedelta(
@@ -48,6 +50,7 @@ def create_access_token(
         "sub": str(user_id),
         "username": email_or_username,
         "role": role,
+        "version": token_version,
         "exp": expiration
     }
 

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
+from app.models.lifecycle import UserLifecycle
 
 
 security = HTTPBearer()
@@ -33,6 +34,11 @@ def get_current_user(
             detail="Invalid authentication token"
         )
 
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+
     user = db.query(User).filter(
         User.user_id == int(user_id)
     ).first()
@@ -43,6 +49,9 @@ def get_current_user(
             detail="User not found"
         )
 
+    state = db.get(UserLifecycle, user.user_id)
+    if state and (not state.is_active or payload.get("version", 0) != state.token_version):
+        raise HTTPException(status_code=401, detail="Session expired or account deactivated. Sign in again.")
     return user
 
 

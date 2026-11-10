@@ -16,18 +16,28 @@ Architecture Rule:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.academic_calendar import term_date_range
 from app.models.academic import Assessment
 from app.models.analytics import Recommendation
 from app.models.behaviour import Attendance, BehaviourRecord
 from app.models.student import Student
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Configurable Remediation Benchmark
+# ---------------------------------------------------------------------------
+# Internal early-intervention threshold for academic support triage.
+# NOTE: This 50.0% benchmark is a system-defined parameter, NOT an official
+# KICD/CBC cutoff (CBC uses rubric performance levels: Exceeding Expectations,
+# Meeting Expectations, Approaching Expectations, Below Expectations).
+DEFAULT_REMEDIATION_BENCHMARK_PCT: float = 50.0
 
 
 class ExpertSystemService:
@@ -47,6 +57,7 @@ class ExpertSystemService:
         support_probability: float,
         support_status: str,
         absences_count: int | float,
+        remediation_benchmark: float = DEFAULT_REMEDIATION_BENCHMARK_PCT,
     ) -> List[Recommendation]:
         """
         Evaluate student context across all expert rules and persist recommendations.
@@ -110,7 +121,7 @@ class ExpertSystemService:
         failing_subjects = [
             str(subj.subject_name)
             for subj in subject_averages
-            if float(subj.avg_pct) < 50.0
+            if float(subj.avg_pct) < remediation_benchmark
         ]
 
         if failing_subjects:
@@ -120,9 +131,10 @@ class ExpertSystemService:
                 "priority": "High",
                 "target_audience": "Both",
                 "text": (
-                    f"Learner is experiencing academic difficulties in: {subjects_str}. "
+                    f"Learner has recorded subject assessment averages below the system-defined remediation benchmark "
+                    f"({remediation_benchmark:.0f}%) in: {subjects_str}. "
                     f"Targeted revision in these specific learning areas and teacher consultation "
-                    f"are strongly recommended."
+                    f"are recommended to diagnose specific topic difficulties."
                 ),
             })
 
@@ -143,11 +155,14 @@ class ExpertSystemService:
         # -------------------------------------------------------------
         # 4. Behaviour & Engagement Rules
         # -------------------------------------------------------------
+        start, end = term_date_range(term, academic_year)
         low_behaviour_records = (
             db.query(BehaviourRecord)
             .filter(
                 BehaviourRecord.student_id == student.student_id,
                 BehaviourRecord.rating <= 2,
+                BehaviourRecord.record_date >= start,
+                BehaviourRecord.record_date <= end,
             )
             .all()
         )
@@ -186,7 +201,7 @@ class ExpertSystemService:
                 recommendation_text=rec_data["text"],
                 target_audience=rec_data["target_audience"],
                 priority=rec_data["priority"],
-                generated_at=datetime.utcnow(),
+                generated_at=datetime.now(timezone.utc),
                 status="Active",
             )
             db.add(rec)
@@ -200,5 +215,20 @@ class ExpertSystemService:
             term,
             academic_year,
         )
+
+        # Generate associated learning path activities and educational resources
+        try:
+            from app.services.learning_path_service import LearningPathService
+            LearningPathService.generate_learning_paths_for_recommendations(
+                db=db,
+                student=student,
+                term=term,
+                academic_year=academic_year,
+                recommendations=persisted,
+                remediation_benchmark=remediation_benchmark,
+            )
+        except Exception as lp_err:
+            db.rollback()
+            logger.warning("Could not generate learning paths: %s", lp_err)
 
         return persisted

@@ -10,7 +10,7 @@ Exposes endpoints for:
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,24 +19,22 @@ from sqlalchemy.orm import Session
 
 from app.core.academic_calendar import term_date_range, term_for_date
 from app.core.database import get_db
+from app.services.lifecycle_service import require_active_student
 from app.core.dependencies import get_current_user, require_role
-from app.models.academic import Assessment, CohortPercentile
-from app.models.analytics import Recommendation, StudentAnalytics
-from app.models.behaviour import Attendance
+from app.models.academic import CohortPercentile
+from app.models.analytics import AnalyticsFreshness, Recommendation, StudentAnalytics
 from app.models.student import ParentStudent, Student, TeacherAssignment
 from app.models.user import User
 from app.schemas.analytics import (
     CalculateAnalyticsRequest,
+    LearningPathItemOut,
+    LearningResourceOut,
     RecommendationOut,
     StudentAnalyticsOut,
 )
-from app.services.catboost_service import (
-    ModelServiceError,
-    get_catboost_service,
-    map_period_absences_to_model_feature,
-)
-from app.services.expert_system import ExpertSystemService
-from app.services.percentile_service import PercentileService
+from app.models.learning_path import LearningResource
+from app.services.learning_path_service import LearningPathService
+from app.services.analytics_service import cohort_students, count_term_absences, invalidate, refresh_students
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +56,8 @@ def verify_student_access(
     - Teacher: Must be assigned to student's grade_level and stream.
     - Parent: Must be registered as student's parent (if allow_parent is True).
     """
+    if current_user.role != "ADMIN":
+        require_active_student(db, student)
     if current_user.role == "ADMIN":
         return
 
@@ -100,26 +100,6 @@ def verify_student_access(
     )
 
 
-def count_term_absences(db: Session, student_id: int, term: str, academic_year: str) -> int:
-    """Count a student's absences recorded within the given term's date window."""
-    try:
-        start, end = term_date_range(term, academic_year)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-
-    return (
-        db.query(func.count(Attendance.attendance_id))
-        .filter(
-            Attendance.student_id == student_id,
-            Attendance.status == "Absent",
-            Attendance.record_date >= start,
-            Attendance.record_date <= end,
-        )
-        .scalar()
-        or 0
-    )
-
-
 @router.post(
     "/calculate/{student_id}",
     response_model=StudentAnalyticsOut,
@@ -151,128 +131,22 @@ def calculate_student_analytics(
             detail=f"Student with ID {student_id} not found.",
         )
 
+    require_active_student(db, student)
     verify_student_access(current_user, student, db, allow_parent=False)
 
-    # 1. Feature 1: first_term_pct (Period 1 assessments)
-    assessments = (
-        db.query(Assessment)
-        .filter(
-            Assessment.student_id == student_id,
-            Assessment.term == term,
-            Assessment.academic_year == academic_year,
-        )
-        .all()
-    )
-
-    if not assessments:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"No assessment records found for student {student_id} in {term} {academic_year}. "
-                "At least one Period 1 assessment is required to compute early-warning indicators."
-            ),
-        )
-
-    overall_average = round(
-        float(sum(a.percentage for a in assessments) / len(assessments)),
-        2,
-    )
-    first_term_pct = overall_average
-
-    # 2. Feature 2: cohort_percentile (Leak-free within cohort)
-    cohort_percentile = PercentileService.get_or_calculate_student_percentile(
-        db=db,
-        student=student,
-        term=term,
-        academic_year=academic_year,
-    )
-
-    # 3. Feature 3: absences (this term only, mapped to benchmark scale)
-    absences_count = count_term_absences(db, student_id, term, academic_year)
-
-    mapped_absences = map_period_absences_to_model_feature(
-        period_absences=absences_count,
-        term_index=1,
-        total_terms=3,
-        annualize=True,
-    )
-
-    # 4. CatBoost + Platt Calibrator Prediction
-    catboost_service = get_catboost_service()
     try:
-        prediction = catboost_service.predict(
-            first_term_pct=first_term_pct,
-            cohort_percentile=cohort_percentile,
-            absences=mapped_absences,
-        )
-    except ModelServiceError as exc:
-        logger.error("CatBoost model service error: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Academic risk prediction unavailable: {exc}",
-        ) from exc
-
-    support_probability = prediction["support_probability"]
-    support_status = prediction["support_status"]
-
-    # 5. Persist StudentAnalytics
-    analytics = (
-        db.query(StudentAnalytics)
-        .filter(
-            StudentAnalytics.student_id == student_id,
-            StudentAnalytics.term == term,
-            StudentAnalytics.academic_year == academic_year,
-        )
-        .first()
-    )
-
-    now = datetime.utcnow()
-    if analytics:
-        analytics.overall_average = overall_average
-        analytics.support_probability = support_probability
-        analytics.support_status = support_status
-        analytics.calculated_at = now
-    else:
-        analytics = StudentAnalytics(
-            student_id=student_id,
-            term=term,
-            academic_year=academic_year,
-            overall_average=overall_average,
-            support_probability=support_probability,
-            support_status=support_status,
-            calculated_at=now,
-        )
-        db.add(analytics)
-
+        term_date_range(term, academic_year)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    affected = cohort_students(db, student)
+    invalidate(db, affected, term, academic_year)
     db.commit()
-    db.refresh(analytics)
-
-    # 6. Generate Expert System Recommendations
-    recs = ExpertSystemService.evaluate_and_generate_recommendations(
-        db=db,
-        student=student,
-        term=term,
-        academic_year=academic_year,
-        overall_average=overall_average,
-        cohort_percentile=cohort_percentile,
-        support_probability=support_probability,
-        support_status=support_status,
-        absences_count=absences_count,
-    )
-
-    return StudentAnalyticsOut(
-        analytics_id=analytics.analytics_id,
-        student_id=analytics.student_id,
-        term=analytics.term,
-        academic_year=analytics.academic_year,
-        overall_average=analytics.overall_average,
-        support_probability=analytics.support_probability,
-        support_status=analytics.support_status,
-        calculated_at=analytics.calculated_at,
-        cohort_percentile=cohort_percentile,
-        absences_count=absences_count,
-        recommendations=[RecommendationOut.model_validate(r) for r in recs],
-    )
+    results = refresh_students(db, affected, term, academic_year)
+    result = results[student_id]
+    if result["status"] != "current":
+        raise HTTPException(status_code=400 if result["status"] == "pending" else 503,
+                            detail=result["message"])
+    return get_student_analytics(student_id, term, academic_year, current_user, db)
 
 
 @router.get(
@@ -313,6 +187,10 @@ def get_student_analytics(
             detail=f"Analytics not yet calculated for student {student_id} in {period}.",
         )
 
+    freshness = db.query(AnalyticsFreshness).filter_by(
+        student_id=student_id, term=analytics.term, academic_year=analytics.academic_year).first()
+    is_current = freshness is not None and freshness.state == "current"
+
     # Everything below describes the period the analytics were calculated for.
     term, academic_year = analytics.term, analytics.academic_year
 
@@ -342,16 +220,106 @@ def get_student_analytics(
 
     absences_count = count_term_absences(db, student_id, term, academic_year)
 
+    learning_paths = LearningPathService.get_student_learning_path(
+        db, student_id, term=term, academic_year=academic_year, active_only=True
+    )
+    lp_by_rec = {lp.recommendation_id: LearningPathItemOut.model_validate(lp) for lp in learning_paths if lp.recommendation_id}
+
+    formatted_recs = []
+    for r in recs:
+        rec_out = RecommendationOut(
+            recommendation_id=r.recommendation_id,
+            student_id=r.student_id,
+            term=r.term,
+            academic_year=r.academic_year,
+            rule_code=r.rule_code,
+            recommendation_text=r.recommendation_text,
+            target_audience=r.target_audience,
+            priority=r.priority,
+            status=r.status,
+            generated_at=r.generated_at,
+            learning_path=lp_by_rec.get(r.recommendation_id),
+        )
+        formatted_recs.append(rec_out)
+
     return StudentAnalyticsOut(
+        freshness=freshness.state if freshness else "stale",
+        is_current=is_current,
+        freshness_message=freshness.message if freshness else "Recalculate analytics to verify freshness.",
         analytics_id=analytics.analytics_id,
         student_id=analytics.student_id,
         term=analytics.term,
         academic_year=analytics.academic_year,
-        overall_average=analytics.overall_average,
-        support_probability=analytics.support_probability,
-        support_status=analytics.support_status,
+        overall_average=analytics.overall_average if is_current else None,
+        support_probability=analytics.support_probability if is_current else None,
+        support_status=analytics.support_status if is_current else "Recalculation needed",
         calculated_at=analytics.calculated_at,
-        cohort_percentile=cohort_percentile,
+        cohort_percentile=cohort_percentile if is_current else None,
         absences_count=absences_count,
-        recommendations=[RecommendationOut.model_validate(r) for r in recs],
+        recommendations=formatted_recs if is_current else [],
+        learning_path=[LearningPathItemOut.model_validate(lp) for lp in learning_paths] if is_current else [],
     )
+
+
+@router.get(
+    "/student/{student_id}/learning-path",
+    response_model=List[LearningPathItemOut],
+)
+def get_learner_learning_path(
+    student_id: int,
+    term: Optional[str] = Query(None, description="Academic term; omit for all active"),
+    academic_year: Optional[str] = Query(None, description="Academic year; omit for all active"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve tailored learning-path activities and educational resources for a learner.
+    Enforces role-based permissions:
+    - Admin: Full access.
+    - Teacher: Authorized for students in assigned classes only.
+    - Parent: Authorized for linked children only.
+    """
+    student = db.query(Student).filter(Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Student with ID {student_id} not found.",
+        )
+
+    verify_student_access(current_user, student, db, allow_parent=True)
+
+    items = LearningPathService.get_student_learning_path(
+        db, student_id, term=term, academic_year=academic_year, active_only=True
+    )
+    fresh_periods = {(row.term, row.academic_year) for row in db.query(AnalyticsFreshness).filter_by(
+        student_id=student_id, state="current").all()}
+    return [LearningPathItemOut.model_validate(item) for item in items
+            if (item.term, item.academic_year) in fresh_periods]
+
+
+@router.get(
+    "/learning-resources",
+    response_model=List[LearningResourceOut],
+)
+def list_learning_resources(
+    subject: Optional[str] = Query(None, description="Filter by subject or learning area"),
+    grade_level: Optional[str] = Query(None, description="Filter by grade level"),
+    alignment_type: Optional[str] = Query(None, description="Filter by CURRICULUM_ALIGNED or PROVISIONAL_SUPPORT"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    List curated educational resources and activities from the starter catalogue.
+    Available to all authenticated users (teachers, parents, administrators).
+    """
+    LearningPathService.seed_starter_catalogue_if_empty(db)
+    query = db.query(LearningResource)
+    if subject:
+        query = query.filter(func.lower(LearningResource.subject_name) == subject.lower().strip())
+    if grade_level:
+        query = query.filter(LearningResource.grade_level == grade_level.strip())
+    if alignment_type:
+        query = query.filter(LearningResource.alignment_type == alignment_type.strip())
+
+    resources = query.order_by(LearningResource.resource_id.asc()).all()
+    return [LearningResourceOut.model_validate(r) for r in resources]
