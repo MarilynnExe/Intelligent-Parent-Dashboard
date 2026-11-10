@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/teacher-dashboard.css">
     <link rel="stylesheet" href="css/notifications.css">
     <link rel="stylesheet" href="css/record-editor.css">
+    <link rel="stylesheet" href="css/class-assignments.css">
 </head>
 
 <body>
@@ -53,6 +54,7 @@
             <span>🗒️</span>
             <span>Behaviour & Notes</span>
         </button>
+        <button id="tab-class-assignments" class="sub-nav-btn" data-target="section-class-assignments"><span>📝</span><span>Assignments & Completion</span></button>
     </nav>
 
     <!-- Main Dashboard Container -->
@@ -444,6 +446,34 @@
         </section>
 
 
+        <section id="section-class-assignments" class="content-section">
+            <div class="section-card"><h3>Class assignments</h3>
+                <p id="work-class-context">Select your assigned class and subject above.</p>
+                <p>Track completion separately from assessment marks. Unsubmitted work becomes missing after its due date, using Africa/Nairobi time.</p>
+                <form id="class-assignment-form">
+                    <div class="form-grid">
+                        <div class="form-group"><label for="work-title">Assignment title</label><input id="work-title" class="form-control" maxlength="150" required></div>
+                        <div class="form-group"><label for="work-assigned-date">Assigned date</label><input id="work-assigned-date" class="form-control" type="date" required></div>
+                        <div class="form-group"><label for="work-due-date">Due date</label><input id="work-due-date" class="form-control" type="date" required></div>
+                    </div>
+                    <div class="form-group"><label for="work-instructions">Instructions</label><textarea id="work-instructions" class="form-control" maxlength="4000" rows="3"></textarea></div>
+                    <button type="submit" id="work-create" class="btn btn-purple" disabled>Create class assignment</button>
+                </form>
+                <p id="work-teacher-status" role="status" aria-live="polite"></p>
+            </div>
+            <div class="section-card">
+                <div class="work-toolbar"><h3>Assignments for this class and period</h3><label><input id="work-include-withdrawn" type="checkbox"> Show withdrawn</label><button id="work-refresh" class="btn btn-purple btn-sm" type="button">Refresh assignments</button></div>
+                <div id="teacher-assignment-list">Select a class to load assignments.</div>
+            </div>
+            <div id="assignment-register-panel" class="section-card" hidden>
+                <div class="work-toolbar"><h3 id="completion-register-title">Completion register</h3><button id="work-close-register" type="button" class="btn">Close register</button></div>
+                <p id="completion-register-context"></p>
+                <form id="completion-register-form"><div class="table-responsive"><table class="data-table">
+                    <thead><tr><th>Learner</th><th>Saved status</th><th>Completion</th><th>Actual submission date</th><th>Late reason / note</th></tr></thead>
+                    <tbody id="completion-register-body"></tbody>
+                </table></div><button id="work-save-register" class="btn btn-purple" type="submit" disabled>Save completion register</button></form>
+            </div>
+        </section>
 
 
     </main>
@@ -555,6 +585,7 @@
     <script src="JS/notifications.js"></script>
     <script src="JS/record-editor.js"></script>
     <script src="JS/teacher-dashboard.js"></script>
+    <script src="JS/class-assignments.js"></script>
 
     <!-- Notifications Drawer Backdrop -->
     <div id="notif-backdrop" class="notif-backdrop"></div>

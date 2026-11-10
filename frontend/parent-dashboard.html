@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/parent-dashboard.css">
     <link rel="stylesheet" href="css/notifications.css">
+    <link rel="stylesheet" href="css/class-assignments.css">
 </head>
 
 <body>
@@ -48,6 +49,7 @@
             <span>📅</span>
             <span>Attendance & Habits</span>
         </button>
+        <button id="tab-assignments" class="sub-nav-btn" data-target="section-assignments"><span>📝</span><span>Assignments</span></button>
     </nav>
 
     <!-- Main Dashboard Container -->
@@ -283,6 +285,14 @@
             </section>
 
 
+            <section id="section-assignments" class="content-section">
+                <div class="section-card"><h3>Assignment completion</h3><p id="assignment-asof"></p>
+                    <p id="assignment-completion-rate">—</p><p>Completion rate covers work due by today, excluding excused and withdrawn tasks. Both on-time and late submissions count as completed.</p>
+                    <div id="assignment-counts" class="work-counts"></div>
+                    <p>Missing status is automatic after the due date. Teachers record late submissions and their reasons. This guidance is separate from CatBoost predictions.</p>
+                    <div id="assignment-guidance"></div>
+                </div><div id="parent-assignment-list">Loading assignments…</div>
+            </section>
         </div>
 
 
@@ -384,6 +394,7 @@
 
     <script src="JS/api.js"></script>
     <script src="JS/notifications.js"></script>
+    <script src="JS/class-assignments.js"></script>
     <script src="JS/parent-dashboard.js"></script>
 
 </body>

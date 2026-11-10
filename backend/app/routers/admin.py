@@ -166,7 +166,8 @@ def enroll_student(
 
     db.add(student)
     db.flush()
-
+    from app.services.assignment_service import sync_new_learner
+    sync_new_learner(db, student)
     db.commit()
     db.refresh(student)
 

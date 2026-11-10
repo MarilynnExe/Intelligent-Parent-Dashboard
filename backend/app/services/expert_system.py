@@ -47,6 +47,16 @@ class ExpertSystemService:
     """
 
     @staticmethod
+    def assignment_guidance(missing_titles):
+        """Observed work completion guidance, independent of model predictions."""
+        if not missing_titles:
+            return []
+        titles = "; ".join(missing_titles[:3])
+        remainder = f" and {len(missing_titles) - 3} more" if len(missing_titles) > 3 else ""
+        return [{"rule_code": "ASSIGNMENT_MISSING_WORK", "priority": "Medium",
+                 "text": f"Missing work: {titles}{remainder}. Review the tasks with the learner and agree on a completion schedule with the teacher. This guidance is based on recorded completion, not a model prediction."}]
+
+    @staticmethod
     def evaluate_and_generate_recommendations(
         db: Session,
         student: Student,

@@ -15,6 +15,7 @@ from app.schemas.admin import (UserUpdate, UserOut, StudentCreate, StudentOut,
 from app.services.lifecycle_service import (active_users, active_students, user_state, archived,
     snapshot, record_change, require_active_student)
 from app.services.analytics_service import cohort_students, invalidate, refresh_students
+from app.services.assignment_service import sync_new_learner
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"])
 admin = require_role(["ADMIN"])
@@ -110,6 +111,7 @@ def update_student(student_id: int, data: StudentCreate, actor: User = Depends(a
     for key, value in data.model_dump().items():
         setattr(row, key, value)
     db.flush()
+    sync_new_learner(db, row)
     members = list({s.student_id: s for s in old + cohort_students(db, row) + [row]}.values())
     periods = student_refresh_plan(db, members)
     record_change(db, actor, row, "update", before)
@@ -127,6 +129,8 @@ def change_student_status(db, row, actor, is_archived):
     before = {**snapshot(row), "is_archived": state.is_archived}
     state.is_archived = is_archived
     db.flush()
+    if not is_archived:
+        sync_new_learner(db, row)
     members = list({s.student_id: s for s in members + cohort_students(db, row) + [row]}.values())
     periods = student_refresh_plan(db, members)
     record_change(db, actor, row, "archive" if is_archived else "restore", before)

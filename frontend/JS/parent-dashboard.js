@@ -200,9 +200,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("child-profile-banner").style.display = "flex";
         const query = new URLSearchParams(period);
         try {
-            const [analyticsRes, progressRes] = await Promise.all([
+            const [analyticsRes, progressRes, assignmentsRes] = await Promise.all([
                 apiFetch(`/analytics/student/${child.student_id}?${query}`),
                 apiFetch(`/parent/children/${child.student_id}/progress?${query}`),
+                apiFetch(`/parent/children/${child.student_id}/assignments?${query}`),
             ]);
             if (requestId !== state.requestId) return;
             if (!progressRes.ok) throw new Error("Unable to load learner progress. Please refresh to retry.");
@@ -230,12 +231,18 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("stat-academic-average").textContent = progress.overall_average == null ? "—" : `${progress.overall_average.toFixed(1)}%`;
             renderAssessments(progress.assessments);
             renderProgress(progress);
+            if (assignmentsRes.ok) {
+                const assignments = await assignmentsRes.json();
+                if (requestId !== state.requestId) return;
+                AssignmentParent.render(assignments);
+            } else {AssignmentParent.error();}
             refreshStatus.textContent = `Updated ${new Date().toLocaleTimeString()}. Refreshes every 30 seconds.`;
         } catch (err) {
             if (requestId !== state.requestId) return;
             // Clear cached guidance: a failed refresh must never look like current information.
             renderEmptyAnalytics();
             renderEmptyAssessments();
+            AssignmentParent.error();
             document.getElementById("assessment-progress").textContent = "Progress unavailable. Refresh to retry.";
             document.getElementById("attendance-summary").textContent = "Attendance unavailable.";
             document.getElementById("attendance-trend").replaceChildren();

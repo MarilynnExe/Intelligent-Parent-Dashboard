@@ -12,5 +12,6 @@ from app.models.user import User
 
 from app.models.lifecycle import UserLifecycle, StudentLifecycle, RecordChange
 
+from app.models.assignment import ClassAssignment, AssignmentCompletion
 
 

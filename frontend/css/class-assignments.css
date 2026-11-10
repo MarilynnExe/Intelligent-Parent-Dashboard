@@ -1,0 +1,18 @@
+.work-card { border:1px solid #ddd6fe; border-radius:12px; padding:1.1rem; margin:1rem 0; background:white; overflow-wrap:anywhere; }
+.work-card header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:.6rem; }
+.work-card p { margin:.6rem 0; }
+.work-instructions { white-space:pre-wrap; }
+.work-status { display:inline-block; border-radius:999px; padding:.25rem .6rem; font-size:.8rem; font-weight:700; background:#f1f5f9; color:#475569; }
+.work-missing { color:#9f1239; background:#fff1f2; }
+.work-late { color:#92400e; background:#fffbeb; }
+.work-submitted { color:#166534; background:#f0fdf4; }
+.work-excused { color:#075985; background:#f0f9ff; }
+.work-counts { display:flex; flex-wrap:wrap; gap:.8rem; margin:1rem 0; }
+.work-count { display:flex; align-items:center; gap:.6rem; border:1px solid #e2e8f0; padding:.6rem; border-radius:8px; }
+.work-guidance { background:#fffbeb; color:#78350f; padding:1rem; border-radius:8px; line-height:1.6; margin:1rem 0; }
+.work-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.7rem; margin:1rem 0; }
+#work-teacher-status { padding:.8rem 0; line-height:1.6; }
+#completion-register-body input, #completion-register-body select, #completion-register-body textarea { font:inherit; padding:.4rem; border:1px solid #cbd5e1; border-radius:5px; max-width:100%; }
+#completion-register-body textarea { min-width:170px; min-height:65px; }
+#assignment-register-panel[hidden] { display:none; }
+#assignment-register-panel { scroll-margin-top:1rem; }
